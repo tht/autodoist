@@ -4,6 +4,8 @@ import logging
 import argparse
 
 # noinspection PyPackageRequirements
+import os
+
 from todoist.api import TodoistAPI
 
 import time
