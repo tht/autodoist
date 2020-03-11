@@ -3,14 +3,13 @@
 import logging
 import argparse
 
-# noinspection PyPackageRequirements
-import os
-
 from todoist.api import TodoistAPI
 
 import time
 import sys
 from datetime import datetime
+
+CHECKED = 1
 
 
 def get_subitems(items, parent_item=None):
@@ -18,20 +17,20 @@ def get_subitems(items, parent_item=None):
     result_items = []
     found = False
     if parent_item:
-        required_indent = parent_item['indent'] + 1
+        required_parent_id = parent_item['parent_id'] + 1
     else:
-        required_indent = 1
+        required_parent_id = 1
     for item in items:
         if parent_item:
             if not found and item['id'] != parent_item['id']:
                 continue
             else:
                 found = True
-            if item['indent'] == parent_item['indent'] and item['id'] != parent_item['id']:
+            if item['parent_id'] == parent_item['parent_id'] and item['id'] != parent_item['id']:
                 return result_items
-            elif item['indent'] == required_indent and found:
+            elif item['parent_id'] == required_parent_id and found:
                 result_items.append(item)
-        elif item['indent'] == required_indent:
+        elif item['parent_id'] == required_parent_id:
             result_items.append(item)
     return result_items
 
@@ -81,9 +80,9 @@ def main():
     labels = api.labels.all(lambda x: x['name'] == args.label)
     if len(labels) > 0:
         label_id = labels[0]['id']
-        logging.debug('Label %s found as label id %d', args.label, label_id)
+        logging.debug('Label \'%s\' found as label id %d', args.label, label_id)
     else:
-        logging.error("Label %s doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
+        logging.error("Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
         sys.exit(1)
 
     def get_project_type(project_object):
@@ -107,14 +106,14 @@ def main():
     def add_label(item, label):
         if label not in item['labels']:
             labels = item['labels']
-            logging.debug('Updating %s with label', item['content'])
+            logging.debug('Updating \'%s\' with label', item['content'])
             labels.append(label)
             api.items.update(item['id'], labels=labels)
 
     def remove_label(item, label):
         if label in item['labels']:
             labels = item['labels']
-            logging.debug('Updating %s without label', item['content'])
+            logging.debug('Updating \'%s\' without label', item['content'])
             labels.remove(label)
             api.items.update(item['id'], labels=labels)
 
@@ -128,10 +127,11 @@ def main():
             for project in api.projects.all():
                 project_type = get_project_type(project)
                 if project_type:
-                    logging.debug('Project %s being processed as %s', project['name'], project_type)
+                    logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
 
                     # Get all items for the project, sort by the item_order field.
-                    items = sorted(api.items.all(lambda x: x['project_id'] == project['id']), key=lambda x: x['item_order'])
+                    items = sorted(api.items.all(lambda x: x['project_id'] == project['id']),
+                                   key=lambda x: x['child_order'])
 
                     for item in items:
 
@@ -144,15 +144,17 @@ def main():
                                 continue
 
                         item_type = get_item_type(item)
-                        child_items = get_subitems(items, item)
+                        # child_items = get_subitems(items, item)
+                        child_items = sorted(list(filter(lambda x: x['parent_id'] == item['id'], items)),
+                                             key=lambda x: x['child_order'])
                         if item_type:
-                            logging.debug('Identified %s as %s type', item['content'], item_type)
+                            logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
 
                         if item_type or len(child_items) > 0:
                             # Process serial tagged items
                             if item_type == 'serial':
+                                first_found = False
                                 for child_item in child_items:
-                                    first_found = False
                                     if child_item['checked'] == 0 and not first_found:
                                         add_label(child_item, label_id)
                                         first_found = True
@@ -166,11 +168,11 @@ def main():
                             # Remove the label from the parent
                             remove_label(item, label_id)
 
-                        # Process items as per project type on indent 1 if untagged
+                        # Process items(w/ project as parent and no children) per project type
                         else:
-                            if item['indent'] == 1:
+                            if item['parent_id'] is None:
                                 if project_type == 'serial':
-                                    if item['item_order'] == 1:
+                                    if item['child_order'] == 1:
                                         add_label(item, label_id)
                                     else:
                                         remove_label(item, label_id)
