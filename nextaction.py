@@ -57,6 +57,7 @@ def main():
         log_level = logging.DEBUG
     else:
         log_level = logging.INFO
+        # TODO add info log every x amount of time
     logging.basicConfig(level=log_level)
 
     # Check we have a API key
@@ -129,9 +130,10 @@ def main():
                 if project_type:
                     logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
 
-                    # Get all items for the project, sort by the item_order field.
-                    items = sorted(api.items.all(lambda x: x['project_id'] == project['id']),
-                                   key=lambda x: x['child_order'])
+                    # Get all items for the project
+                    items = api.items.all(lambda x: x['project_id'] == project['id'])
+
+                    first_found = False
 
                     for item in items:
 
@@ -153,17 +155,19 @@ def main():
                         if item_type or len(child_items) > 0:
                             # Process serial tagged items
                             if item_type == 'serial':
-                                first_found = False
+                                child_first_found = False
                                 for child_item in child_items:
-                                    if child_item['checked'] == 0 and not first_found:
-                                        add_label(child_item, label_id)
-                                        first_found = True
+                                    if child_item['checked'] == 0 and not child_first_found:
+                                        if not child_item['content'].startswith('*'):
+                                            add_label(child_item, label_id)
+                                            child_first_found = True
                                     else:
                                         remove_label(child_item, label_id)
                             # Process parallel tagged items or untagged parents
                             else:
                                 for child_item in child_items:
-                                    add_label(child_item, label_id)
+                                    if not child_item['content'].startswith('*'):
+                                        add_label(child_item, label_id)
 
                             # Remove the label from the parent
                             remove_label(item, label_id)
@@ -172,12 +176,14 @@ def main():
                         else:
                             if item['parent_id'] is None:
                                 if project_type == 'serial':
-                                    if item['child_order'] == 1:
+                                    if not first_found and not item['content'].startswith('*'):
                                         add_label(item, label_id)
+                                        first_found = True
                                     else:
                                         remove_label(item, label_id)
                                 elif project_type == 'parallel':
-                                    add_label(item, label_id)
+                                    if not item['content'].startswith('*'):
+                                        add_label(item, label_id)
 
             if len(api.queue):
                 logging.debug('%d changes queued for sync... commiting to Todoist.', len(api.queue))
