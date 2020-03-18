@@ -131,7 +131,8 @@ def main():
                     logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
 
                     # Get all items for the project
-                    items = api.items.all(lambda x: x['project_id'] == project['id'])
+                    items = sorted(api.items.all(lambda x: x['project_id'] == project['id']),
+                                   key=lambda x: x['child_order'])
 
                     first_found = False
 
