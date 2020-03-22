@@ -12,29 +12,6 @@ from datetime import datetime
 CHECKED = 1
 
 
-def get_subitems(items, parent_item=None):
-    """Search a flat item list for child items."""
-    result_items = []
-    found = False
-    if parent_item:
-        required_parent_id = parent_item['parent_id'] + 1
-    else:
-        required_parent_id = 1
-    for item in items:
-        if parent_item:
-            if not found and item['id'] != parent_item['id']:
-                continue
-            else:
-                found = True
-            if item['parent_id'] == parent_item['parent_id'] and item['id'] != parent_item['id']:
-                return result_items
-            elif item['parent_id'] == required_parent_id and found:
-                result_items.append(item)
-        elif item['parent_id'] == required_parent_id:
-            result_items.append(item)
-    return result_items
-
-
 def main():
     """Main process function."""
     parser = argparse.ArgumentParser()
@@ -57,7 +34,6 @@ def main():
         log_level = logging.DEBUG
     else:
         log_level = logging.INFO
-        # TODO add info log every x amount of time
     logging.basicConfig(level=log_level)
 
     # Check we have a API key
@@ -133,6 +109,8 @@ def main():
                     # Get all items for the project
                     items = sorted(api.items.all(lambda x: x['project_id'] == project['id']),
                                    key=lambda x: x['child_order'])
+                    # filter for completable items
+                    items = list(filter(lambda x: not x['content'].startswith('*'), items))
 
                     first_found = False
 
@@ -146,45 +124,42 @@ def main():
                                 remove_label(item, label_id)
                                 continue
 
+                        if item['parent_id'] is None:
+                            if project_type == 'serial':
+                                if not first_found:
+                                    add_label(item, label_id)
+                                    first_found = True
+                                else:
+                                    remove_label(item, label_id)
+                            elif project_type == 'parallel':
+                                add_label(item, label_id)
+
                         item_type = get_item_type(item)
-                        # child_items = get_subitems(items, item)
-                        child_items = sorted(list(filter(lambda x: x['parent_id'] == item['id'], items)),
-                                             key=lambda x: x['child_order'])
+                        child_items = list(filter(lambda x: x['parent_id'] == item['id'], items))
                         if item_type:
                             logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
 
                         if item_type or len(child_items) > 0:
-                            # Process serial tagged items
-                            if item_type == 'serial':
-                                child_first_found = False
-                                for child_item in child_items:
-                                    if child_item['checked'] == 0 and not child_first_found:
-                                        if not child_item['content'].startswith('*'):
+                            if label_id in item['labels']:
+                                # Process serial tagged items
+                                if item_type == 'serial':
+                                    child_first_found = False
+                                    for child_item in child_items:
+                                        if child_item['checked'] == 0 and not child_first_found:
                                             add_label(child_item, label_id)
                                             child_first_found = True
-                                    else:
-                                        remove_label(child_item, label_id)
-                            # Process parallel tagged items or untagged parents
-                            else:
-                                for child_item in child_items:
-                                    if not child_item['content'].startswith('*'):
+                                        else:
+                                            remove_label(child_item, label_id)
+                                # Process parallel tagged items or untagged parents
+                                elif item_type == 'parallel':
+                                    for child_item in child_items:
                                         add_label(child_item, label_id)
 
-                            # Remove the label from the parent
-                            remove_label(item, label_id)
-
-                        # Process items(w/ project as parent and no children) per project type
-                        else:
-                            if item['parent_id'] is None:
-                                if project_type == 'serial':
-                                    if not first_found and not item['content'].startswith('*'):
-                                        add_label(item, label_id)
-                                        first_found = True
-                                    else:
-                                        remove_label(item, label_id)
-                                elif project_type == 'parallel':
-                                    if not item['content'].startswith('*'):
-                                        add_label(item, label_id)
+                                # Remove the label from the parent
+                                remove_label(item, label_id)
+                            else:
+                                for child_item in child_items:
+                                    remove_label(child_item, label_id)
 
             if len(api.queue):
                 logging.debug('%d changes queued for sync... commiting to Todoist.', len(api.queue))
