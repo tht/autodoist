@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import logging
 import argparse
@@ -9,20 +9,17 @@ import time
 import sys
 from datetime import datetime
 
-CHECKED = 1
-
-
 def main():
     """Main process function."""
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--api_key', help='Todoist API Key')
     parser.add_argument('-l', '--label', help='The next action label to use', default='next_action')
-    parser.add_argument('-d', '--delay', help='Specify the delay in seconds between syncs', default=5, type=int)
+    parser.add_argument('-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
     parser.add_argument('--debug', help='Enable debugging', action='store_true')
     parser.add_argument('--inbox', help='The method the Inbox project should be processed',
-                        default='parallel', choices=['parallel', 'serial'])
-    parser.add_argument('--parallel_suffix', default='.')
-    parser.add_argument('--serial_suffix', default='_')
+                        default=None, choices=['parallel', 'serial'])
+    parser.add_argument('--parallel_suffix', default='//')
+    parser.add_argument('--serial_suffix', default='--')
     parser.add_argument('--hide_future', help='Hide future dated next actions until the specified number of days',
                         default=7, type=int)
     parser.add_argument('--onetime', help='Update Todoist once and exit', action='store_true')
@@ -62,23 +59,57 @@ def main():
         logging.error("Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
         sys.exit(1)
 
+    def get_type(object,key):
+        len_suffix = [len(args.parallel_suffix), len(args.serial_suffix)]
+
+        try:
+            old_type = object[key]
+        except Exception as e:
+            logging.debug('No defined project_type: %s' % str(e))
+            old_type = None   
+
+        try:
+            name = object['name'].strip()
+        except:
+            name = object['content'].strip()
+        
+        if name == 'Inbox':
+            current_type = args.inbox
+        elif name[-len_suffix[0]:] == args.parallel_suffix:
+            current_type =  'parallel'
+        elif name[-len_suffix[1]:] == args.serial_suffix:
+            current_type = 'serial'
+        else:
+            current_type = None
+
+        # Check if project type changed with respect to previous run
+        if old_type == current_type:
+            type_changed = 0
+        else:
+            type_changed = 1
+            object[key] = current_type
+
+        return current_type, type_changed
+
     def get_project_type(project_object):
         """Identifies how a project should be handled."""
-        name = project_object['name'].strip()
-        if name == 'Inbox':
-            return args.inbox
-        elif name[-1] == args.parallel_suffix:
-            return 'parallel'
-        elif name[-1] == args.serial_suffix:
-            return 'serial'
+        project_type, project_type_changed = get_type(project_object,'project_type')
 
-    def get_item_type(item):
+        return project_type, project_type_changed
+
+    def get_item_type(item, project_type):
         """Identifies how a item with sub items should be handled."""
-        name = item['content'].strip()
-        if name[-1] == args.parallel_suffix:
-            return 'parallel'
-        elif name[-1] == args.serial_suffix:
-            return 'serial'
+        
+        if project_type is None and item['parent_id'] != 0:
+            try:
+                item_type = item['parent_type']
+                item_type_changed = 1
+            except:
+                item_type, item_type_changed = get_type(item,'item_type') 
+        else:
+            item_type, item_type_changed = get_type(item,'item_type')
+
+        return item_type, item_type_changed
 
     def add_label(item, label):
         if label not in item['labels']:
@@ -102,29 +133,53 @@ def main():
             logging.exception('Error trying to sync with Todoist API: %s' % str(e))
         else:
             for project in api.projects.all():
-                project_type = get_project_type(project)
-                if project_type:
-                    logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
 
-                    # Get all items for the project
-                    items = sorted(api.items.all(lambda x: x['project_id'] == project['id']),
-                                   key=lambda x: x['child_order'])
-                    # filter for completable items
-                    items = list(filter(lambda x: not x['content'].startswith('*'), items))
+                # Get project type
+                project_type, project_type_changed = get_project_type(project)
+                logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
+                
+                # Get all items for the project
+                items = api.items.all(lambda x: x['project_id'] == project['id'])
 
-                    first_found = False
+                # Change top parents_id in order to sort later on
+                for item in items:
+                    if not item['parent_id']:
+                        item['parent_id'] = 0
 
-                    for item in items:
+                # Sort by parent_id and filter for completable items
+                items = sorted(items, key=lambda x: (x['parent_id'], x['child_order']))
+                items = list(filter(lambda x: not x['content'].startswith('*'), items))
 
-                        # If its too far in the future, remove the next_action tag and skip
-                        if args.hide_future > 0 and 'due_date_utc' in item.data and item['due_date_utc'] is not None:
-                            due_date = datetime.strptime(item['due_date_utc'], '%a %d %b %Y %H:%M:%S +0000')
-                            future_diff = (due_date - datetime.utcnow()).total_seconds()
-                            if future_diff >= (args.hide_future * 86400):
-                                remove_label(item, label_id)
-                                continue
+                # If project type has been changed, clean everything foor good measure
+                if project_type_changed == 1:
+                    [remove_label(item, label_id) for item in items]
+                        
+                first_found = False
 
-                        if item['parent_id'] is None:
+                for item in items:
+
+                    # Check item type
+                    item_type, item_type_changed = get_item_type(item, project_type)                           
+                    logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
+                    
+                    # Check for child_items
+                    child_items = list(filter(lambda x: x['parent_id'] == item['id'], items))
+
+                    if project_type is None and item_type is None and project_type_changed == 1:
+                        # Clean the item and its children
+                        remove_label(item, label_id)
+                        for child_item in child_items:
+                            child_item['parent_type'] = None
+
+                        # We can immediately continue
+                        continue
+                    else:
+                        # Define item_type if not present
+                        if item_type is None:
+                            item_type = project_type
+                        
+                        # Add labels to top items
+                        if item['parent_id'] == 0:
                             if project_type == 'serial':
                                 if not first_found:
                                     add_label(item, label_id)
@@ -133,33 +188,44 @@ def main():
                                     remove_label(item, label_id)
                             elif project_type == 'parallel':
                                 add_label(item, label_id)
-
-                        item_type = get_item_type(item)
-                        child_items = list(filter(lambda x: x['parent_id'] == item['id'], items))
-                        if item_type:
-                            logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
-
-                        if item_type or len(child_items) > 0:
-                            if label_id in item['labels']:
-                                # Process serial tagged items
-                                if item_type == 'serial':
-                                    child_first_found = False
-                                    for child_item in child_items:
-                                        if child_item['checked'] == 0 and not child_first_found:
-                                            add_label(child_item, label_id)
-                                            child_first_found = True
-                                        else:
-                                            remove_label(child_item, label_id)
-                                # Process parallel tagged items or untagged parents
-                                elif item_type == 'parallel':
-                                    for child_item in child_items:
-                                        add_label(child_item, label_id)
-
-                                # Remove the label from the parent
-                                remove_label(item, label_id)
                             else:
+                                if item_type:
+                                    add_label(item, label_id)
+                    
+                        # If there are children, label them instead
+                        if len(child_items) > 0:
+
+                            # Check if state has changed, if so clean for good measure
+                            if item_type_changed == 1:
+                                [remove_label(item, label_id) for child_item in child_items]
+
+                            # Process serial tagged items
+                            if item_type == 'serial':
+                                child_first_found = False
                                 for child_item in child_items:
-                                    remove_label(child_item, label_id)
+                                    if child_item['checked'] == 0 and not child_first_found and label_id in item['labels']:
+                                        add_label(child_item, label_id)
+                                        child_item['parent_type'] = item_type
+                                        child_first_found = True
+                                    else:
+                                        remove_label(child_item, label_id)
+                            # Process parallel tagged items or untagged parents
+                            elif item_type == 'parallel':
+                                for child_item in child_items:
+                                    add_label(child_item, label_id)
+                                    child_item['parent_type'] = item_type
+
+                            # Remove the label from the parent
+                            if item_type:
+                                remove_label(item, label_id)
+
+                        # If item is too far in the future, remove the next_action tag and skip
+                        if args.hide_future > 0 and 'due_date_utc' in item.data and item['due_date_utc'] is not None:
+                            due_date = datetime.strptime(item['due_date_utc'], '%a %d %b %Y %H:%M:%S +0000')
+                            future_diff = (due_date - datetime.utcnow()).total_seconds()
+                            if future_diff >= (args.hide_future * 86400):
+                                remove_label(item, label_id)
+                                continue
 
             if len(api.queue):
                 logging.debug('%d changes queued for sync... commiting to Todoist.', len(api.queue))
@@ -173,7 +239,6 @@ def main():
 
         logging.debug('Sleeping for %d seconds', args.delay)
         time.sleep(args.delay)
-
 
 if __name__ == '__main__':
     main()
