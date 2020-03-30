@@ -27,7 +27,7 @@ If a project or task ends with `--`, the child tasks will be treated as a priori
 Parallel list processing
 ------------------------
 If a project or task name ends with `//`, the child tasks will be treated as parallel `@next_action`s.
-A waterfall processing is applied, where the lowest possible children tasks are labelled.
+A waterfall processing is applied, where the lowest possible child tasks are labelled.
 
 Parentless tasks
 ------------------------
