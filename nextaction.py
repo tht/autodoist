@@ -33,6 +33,8 @@ def main():
         log_level = logging.INFO
     logging.basicConfig(level=log_level)
 
+    args.api_key = "18fa3286dd8f7c4fefe8655f8732a235b4ed7fb0"
+
     # Check we have a API key
     if not args.api_key:
         logging.error('No API key set, exiting...')
@@ -134,13 +136,15 @@ def main():
         else:
             for project in api.projects.all():
 
+                print(project['name'])
+
                 # Get project type
                 project_type, project_type_changed = get_project_type(project)
                 logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
                 
                 # Get all items for the project
                 items = api.items.all(lambda x: x['project_id'] == project['id'])
-
+                
                 # Change top parents_id in order to sort later on
                 for item in items:
                     if not item['parent_id']:
@@ -157,6 +161,12 @@ def main():
                 first_found = False
 
                 for item in items:
+                    
+                    # Skip processing an item if it has already been checked
+                    if item['checked'] == 1:
+                        continue
+
+                    print(item['content'])
 
                     # Check item type
                     item_type, item_type_changed = get_item_type(item, project_type)                           
@@ -194,29 +204,31 @@ def main():
                     
                         # If there are children, label them instead
                         if len(child_items) > 0:
+                            child_first_found = False
 
                             # Check if state has changed, if so clean for good measure
                             if item_type_changed == 1:
-                                [remove_label(item, label_id) for child_item in child_items]
+                                [remove_label(child_item, label_id) for child_item in child_items]
 
                             # Process serial tagged items
                             if item_type == 'serial':
-                                child_first_found = False
                                 for child_item in child_items:
                                     if child_item['checked'] == 0 and not child_first_found and label_id in item['labels']:
+                                        child_first_found = True
                                         add_label(child_item, label_id)
                                         child_item['parent_type'] = item_type
-                                        child_first_found = True
                                     else:
                                         remove_label(child_item, label_id)
                             # Process parallel tagged items or untagged parents
                             elif item_type == 'parallel':
                                 for child_item in child_items:
-                                    add_label(child_item, label_id)
-                                    child_item['parent_type'] = item_type
+                                    if child_item['checked'] == 0:
+                                        child_first_found = True
+                                        add_label(child_item, label_id)
+                                        child_item['parent_type'] = item_type
 
                             # Remove the label from the parent
-                            if item_type:
+                            if item_type and child_first_found:
                                 remove_label(item, label_id)
 
                         # If item is too far in the future, remove the next_action tag and skip
