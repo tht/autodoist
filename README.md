@@ -31,7 +31,7 @@ A waterfall processing is applied, where the lowest possible children tasks are 
 
 Parentless tasks
 ------------------------
-Any parentless task can be be given a type by appending '//' or `--` to the name of the task. This works if there is no list type, and will override a previously defined list type.
+Any parentless task can be be given a type by appending `//` or `--` to the name of the task. This works if there is no list type, and will override a previously defined list type.
 
 Executing NextAction
 ====================
@@ -54,6 +54,6 @@ Several arguments can be provided, for example to change the default label:
 
 Or to change the suffix tags:
 
-    python nextaction.py --parallel_suffix <tah>
+    python nextaction.py --parallel_suffix <tag>
     python nextaction.py --serial_suffix <tag>
     
