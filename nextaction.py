@@ -33,8 +33,6 @@ def main():
         log_level = logging.INFO
     logging.basicConfig(level=log_level)
 
-    args.api_key = "18fa3286dd8f7c4fefe8655f8732a235b4ed7fb0"
-
     # Check we have a API key
     if not args.api_key:
         logging.error('No API key set, exiting...')
