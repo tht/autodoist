@@ -136,8 +136,6 @@ def main():
         else:
             for project in api.projects.all():
 
-                print(project['name'])
-
                 # Get project type
                 project_type, project_type_changed = get_project_type(project)
                 logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
@@ -165,8 +163,6 @@ def main():
                     # Skip processing an item if it has already been checked
                     if item['checked'] == 1:
                         continue
-
-                    print(item['content'])
 
                     # Check item type
                     item_type, item_type_changed = get_item_type(item, project_type)                           
