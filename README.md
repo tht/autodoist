@@ -24,14 +24,22 @@ Sequential list processing
 --------------------------
 If a project or task ends with `--`, the child tasks will be treated as a priority queue and the most important will be labeled `@next_action`. Importance is determined by order in the list.
 
+![Serial task](https://i.imgur.com/SUkhPiE.gif)
+
 Parallel list processing
 ------------------------
 If a project or task name ends with `//`, the child tasks will be treated as parallel `@next_action`s.
 A waterfall processing is applied, where the lowest possible child tasks are labelled.
 
+![Parallel task](https://i.imgur.com/NPTLQ8B.gif)
+
 Parentless tasks
 ------------------------
 Any parentless task can be be given a type by appending `//` or `--` to the name of the task. This works if there is no list type, and will override a previously defined list type.
+
+[See example 1 with a parallel project](https://i.imgur.com/d9Qfq0v.gif)
+
+[See example 2 with a serial project](https://i.imgur.com/JfaAOzZ.gif)
 
 Executing NextAction
 ====================
