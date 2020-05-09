@@ -15,11 +15,11 @@ Requirements
 Automatic next action labels
 =====================
 
-The program looks for pre-defined tags in every list and parentless task in your Todoist account to automatically add and remove `@next_action` labels. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
+The program looks for pre-defined tags in the name of every project and parentless tasks in your Todoist account to automatically add and remove `@next_action` labels. 
 
-Projects and parentless tasks can be tagged independently from each other to create the required functionality.
+Projects and parentless tasks can be tagged independently from each other to create the required functionality. If this tag is not defined, it will not activate this functionality. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
 
-Todoist Premium is required to function properly. Make sure the label exists in your Todoist before running the program.
+Make sure the label exists in your Todoist before running the program. Todoist Premium is required in order to use labels and to make this functionality possible.
 
 Sequential list processing
 --------------------------
