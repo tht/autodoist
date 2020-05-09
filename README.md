@@ -45,7 +45,7 @@ Any parentless task can be be given a type by appending `//` or `--` to the name
 Recurring lists
 ====================
 
-The program looks for all parentless tasks with a recurring date. If they contain sub-tasks, they will be restored in the same order when the parentless task is checked.
+The program looks for all parentless tasks with a recurring date. If they contain sub-tasks, they will be restored in the same order when the parentless task is checked. Todoist Premium is not required for this functionality.
 
 ![See example](https://i.imgur.com/WKKd14o.gif)
 
