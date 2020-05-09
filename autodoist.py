@@ -15,7 +15,7 @@ def main():
     parser.add_argument('-a', '--api_key', help='Todoist API Key')
     parser.add_argument('-l', '--label', help='The next action label to use', default='next_action')
     parser.add_argument('-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
-    parser.add_argument('-r', '--recursive', help='Enable re-use of recursive lists', action='store_true')
+    parser.add_argument('-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
     parser.add_argument('--debug', help='Enable debugging', action='store_true')
     parser.add_argument('--inbox', help='The method the Inbox project should be processed',
                         default=None, choices=['parallel', 'serial'])
@@ -33,7 +33,11 @@ def main():
             log_level = logging.DEBUG
         else:
             log_level = logging.INFO
-        logging.basicConfig(filename='DEBUG.log', level=log_level)
+
+        logging.basicConfig(handlers=[logging.FileHandler('DEBUG.log', 'w+', 'utf-8')],
+                            level=log_level, 
+                            format='%(asctime)s %(levelname)-8s %(message)s', 
+                            datefmt='%Y-%m-%d %H:%M:%S')
 
         # Check we have a API key
         if not args.api_key:
@@ -69,7 +73,7 @@ def main():
         try:
             old_type = object[key]
         except Exception as e:
-            logging.debug('No defined project_type: %s' % str(e))
+            # logging.debug('No defined project_type: %s' % str(e))
             old_type = None   
 
         try:
@@ -168,7 +172,7 @@ def main():
                     # Check for child_items
                     child_items = list(filter(lambda x: x['parent_id'] == item['id'], items))
                     
-                    if not args.recursive:
+                    if not args.recurring:
                         try:
                             if item['r_tag'] == 1:
                                 item['r_tag'] = 0
@@ -214,7 +218,7 @@ def main():
 
                     # Check item type
                     item_type, item_type_changed = get_item_type(item, project_type)                           
-                    logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
+                    # logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
                     
                     if project_type is None and item_type is None and project_type_changed == 1:
                         # Clean the item and its children
