@@ -1,13 +1,10 @@
-NextAction
+Autodoist
 ==========
 
-A more GTD-like workflow for Todoist.
+This program adds two major functionalities to Todoist to help automate your workflow:
 
-This program looks for pre-defined tags in every list and parentless task in your Todoist account to automatically add and remove `@next_action` labels.
-
-The result will be a clear, current and comprehensive list of next actions without the need for further thought.
-
-Uses the Todoist Sync API; note that Todoist Premium is required to function properly, since labels are used.
+1) Assign automatic `@next_action` labels for a more GTD-like workflow
+2) Enable re-use of subtasks in lists with a recursive date
 
 Requirements
 ============
@@ -15,53 +12,76 @@ Requirements
 * Python 3.8
 * ```todoist-python``` package.
 
-Activating NextAction
+Automatic next action labels
 =====================
+
+The program looks for pre-defined tags in every list and parentless task in your Todoist account to automatically add and remove `@next_action` labels. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
 
 Projects and parentless tasks can be tagged independently from each other to create the required functionality.
 
+Todoist Premium is required to function properly. Make sure the label exists in your Todoist before running the program.
+
 Sequential list processing
 --------------------------
-If a project or task ends with `--`, the child tasks will be treated as a priority queue and the most important will be labeled `@next_action`. Importance is determined by order in the list.
+If a project or parentless task ends with `--`, the sub-tasks will be treated as a priority queue and the most important will be labeled `@next_action`. Importance is determined by order in the list.
 
 ![Serial task](https://i.imgur.com/SUkhPiE.gif)
 
 Parallel list processing
 ------------------------
-If a project or task name ends with `//`, the child tasks will be treated as parallel `@next_action`s.
-A waterfall processing is applied, where the lowest possible child tasks are labelled.
+If a project or parentless task name ends with `//`, the sub-tasks will be treated as parallel `@next_action`s.
+A waterfall processing is applied, where the lowest possible sub-tasks are labelled.
 
 ![Parallel task](https://i.imgur.com/NPTLQ8B.gif)
 
 Parentless tasks
 ------------------------
-Any parentless task can be be given a type by appending `//` or `--` to the name of the task. This works if there is no list type, and will override a previously defined list type.
+Any parentless task can be be given a type by appending `//` or `--` to the name of the task. This works if there is no project type, and will override a previously defined project type.
 
 [See example 1 with a parallel project](https://i.imgur.com/d9Qfq0v.gif)
 
 [See example 2 with a serial project](https://i.imgur.com/JfaAOzZ.gif)
 
-Executing NextAction
+Recurring lists
 ====================
 
-You can run NexAction from any system that supports Python.
+The program looks for all parentless tasks with a recursive date. If they contain sub-tasks, they will be restored in the same order when the parentless task is checked.
 
-Running NextAction
+![See example](https://i.imgur.com/CIjB7MC.gif)
+
+
+Executing Autodoist
+====================
+
+You can run Autodoist from any system that supports Python.
+
+Running Autodoist
 ------------------
 
-NextAction will read your environment to retrieve your Todoist API key, so to run on a Linux/Mac OSX you can use the following commandline
+Autodoist will read your environment to retrieve your Todoist API key, so to run on Windows/Linux/Mac OSX you can use the following commandline:
 
-    python nextaction.py -a <API Key>
+    python autodoist.py -a <API Key>
+    
+If you want to enable recursive-mode, run with the `-r` argument:
 
+    python autodoist.py -a <API Key> -r
+    
 Additional arguments
 ------------------
 
 Several arguments can be provided, for example to change the default label:
 
-    python nextaction.py -l <label>
+    python autodoist.py -l <label>
 
 Or to change the suffix tags:
 
-    python nextaction.py --parallel_suffix <tag>
-    python nextaction.py --serial_suffix <tag>
+    python autodoist.py --parallel_suffix <tag>
+    python autodoist.py --serial_suffix <tag>
+
+In addition, if you experience issues with syncing you can change the api syncing time (default 10 seconds):
     
+    python autodoist.py -delay <time in seconds>
+
+For all arguments check help:
+
+    python autodoist.py --help
