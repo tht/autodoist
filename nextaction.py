@@ -26,38 +26,41 @@ def main():
     parser.add_argument('--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
     args = parser.parse_args()
 
-    # Set debug
-    if args.debug:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
-    logging.basicConfig(level=log_level)
+    def initialise(args):
+        # Set debug
+        if args.debug:
+            log_level = logging.DEBUG
+        else:
+            log_level = logging.INFO
+        logging.basicConfig(filename='DEBUG.log', level=log_level)
 
-    # Check we have a API key
-    if not args.api_key:
-        logging.error('No API key set, exiting...')
-        sys.exit(1)
+        # Check we have a API key
+        if not args.api_key:
+            logging.error('No API key set, exiting...')
+            sys.exit(1)
 
-    # Run the initial sync
-    logging.debug('Connecting to the Todoist API')
+        # Run the initial sync
+        logging.debug('Connecting to the Todoist API')
 
-    api_arguments = {'token': args.api_key}
-    if args.nocache:
-        logging.debug('Disabling local caching')
-        api_arguments['cache'] = None
+        api_arguments = {'token': args.api_key}
+        if args.nocache:
+            logging.debug('Disabling local caching')
+            api_arguments['cache'] = None
 
-    api = TodoistAPI(**api_arguments)
-    logging.debug('Syncing the current state from the API')
-    api.sync()
+        api = TodoistAPI(**api_arguments)
+        logging.debug('Syncing the current state from the API')
+        api.sync()
 
-    # Check the next action label exists
-    labels = api.labels.all(lambda x: x['name'] == args.label)
-    if len(labels) > 0:
-        label_id = labels[0]['id']
-        logging.debug('Label \'%s\' found as label id %d', args.label, label_id)
-    else:
-        logging.error("Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
-        sys.exit(1)
+        # Check the next action label exists
+        labels = api.labels.all(lambda x: x['name'] == args.label)
+        if len(labels) > 0:
+            label_id = labels[0]['id']
+            logging.debug('Label \'%s\' found as label id %d', args.label, label_id)
+        else:
+            logging.error("Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
+            sys.exit(1)
+
+        return api, label_id
 
     def get_type(object,key):
         len_suffix = [len(args.parallel_suffix), len(args.serial_suffix)]
@@ -121,9 +124,12 @@ def main():
     def remove_label(item, label):
         if label in item['labels']:
             labels = item['labels']
-            logging.debug('Updating \'%s\' without label', item['content'])
+            logging.debug('Removing \'%s\' of its label', item['content'])
             labels.remove(label)
             api.items.update(item['id'], labels=labels)
+    
+    # Initialise api
+    api, label_id = initialise(args)
 
     # Main loop
     while True:
@@ -150,7 +156,7 @@ def main():
                 items = sorted(items, key=lambda x: (x['parent_id'], x['child_order']))
                 items = list(filter(lambda x: not x['content'].startswith('*'), items))
 
-                # If project type has been changed, clean everything foor good measure
+                # If project type has been changed, clean everything for good measure
                 if project_type_changed == 1:
                     [remove_label(item, label_id) for item in items]
                         
@@ -182,19 +188,21 @@ def main():
                         if item_type is None:
                             item_type = project_type
                         
-                        # Add labels to top items
-                        if item['parent_id'] == 0:
-                            if project_type == 'serial':
-                                if not first_found:
+                        # Add labels to top items if they have no childern
+                        if len(child_items) == 0:
+                            if item['parent_id'] == 0:
+                                if project_type == 'serial':
+                                    if not first_found:
+                                        add_label(item, label_id)
+                                        first_found = True
+                                    else:
+                                        remove_label(item, label_id)
+                                elif project_type == 'parallel':
                                     add_label(item, label_id)
-                                    first_found = True
                                 else:
-                                    remove_label(item, label_id)
-                            elif project_type == 'parallel':
-                                add_label(item, label_id)
-                            else:
-                                if item_type:
-                                    add_label(item, label_id)
+                                    # If only the item type has been defined
+                                    if item_type:
+                                        add_label(item, label_id)
                     
                         # If there are children, label them instead
                         if len(child_items) > 0:
