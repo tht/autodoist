@@ -80,7 +80,7 @@ Or to change the suffix tags:
 
 In addition, if you experience issues with syncing you can change the api syncing time (default 10 seconds):
     
-    python autodoist.py -delay <time in seconds>
+    python autodoist.py --delay <time in seconds>
 
 For all arguments check help:
 
