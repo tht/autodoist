@@ -15,6 +15,7 @@ def main():
     parser.add_argument('-a', '--api_key', help='Todoist API Key')
     parser.add_argument('-l', '--label', help='The next action label to use', default='next_action')
     parser.add_argument('-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
+    parser.add_argument('-r', '--recursive', help='Enable re-use of recursive lists')
     parser.add_argument('--debug', help='Enable debugging', action='store_true')
     parser.add_argument('--inbox', help='The method the Inbox project should be processed',
                         default=None, choices=['parallel', 'serial'])
@@ -163,7 +164,50 @@ def main():
                 first_found = False
 
                 for item in items:
+
+                    # Check for child_items
+                    child_items = list(filter(lambda x: x['parent_id'] == item['id'], items))
                     
+                    if not args.recursive:
+                        try:
+                            if item['r_tag'] == 1:
+                                item['r_tag'] = 0
+                        except Exception as e:
+                            pass
+                    else:
+                        if item['parent_id'] == 0:
+                            try:
+                                if item['due']['is_recurring']:
+                                    try:
+                                        if item['due']['date'] != item['old_date']:
+                                            # Save the new date
+                                            item['due']['date'] = item['old_date']
+
+                                            # Mark children for action
+                                            for child_item in child_items:
+                                                child_item['r_tag'] = 1
+                                    except Exception as e:
+                                        logging.debug('New recurring task detected: %s' % str(e))
+                                        item['old_date'] = item['due']['date']
+                                        api.items.update(item['id'])
+                                    
+                            except Exception as e:
+                                logging.debug('Parent not recurring: %s' % str(e))
+                                pass
+                        
+                        try:
+                            if item['r_tag'] == 1:
+                                item.update(checked=0)
+                                item.update(in_history=0)
+                                item['r_tag'] = 0
+                                api.items.update(item['id'])
+
+                                for child_item in child_items:
+                                    child_item['r_tag'] = 1
+                        except Exception as e:
+                            logging.debug('Child not recurring: %s' % str(e))
+                            pass
+                        
                     # Skip processing an item if it has already been checked
                     if item['checked'] == 1:
                         continue
@@ -172,9 +216,6 @@ def main():
                     item_type, item_type_changed = get_item_type(item, project_type)                           
                     logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
                     
-                    # Check for child_items
-                    child_items = list(filter(lambda x: x['parent_id'] == item['id'], items))
-
                     if project_type is None and item_type is None and project_type_changed == 1:
                         # Clean the item and its children
                         remove_label(item, label_id)
