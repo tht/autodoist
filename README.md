@@ -4,7 +4,7 @@ Autodoist
 This program adds two major functionalities to Todoist to help automate your workflow:
 
 1) Assign automatic `@next_action` labels for a more GTD-like workflow
-2) Enable re-use of subtasks in lists with a recursive date
+2) Enable re-use of subtasks in lists with a recurring date
 
 Requirements
 ============
@@ -45,7 +45,7 @@ Any parentless task can be be given a type by appending `//` or `--` to the name
 Recurring lists
 ====================
 
-The program looks for all parentless tasks with a recursive date. If they contain sub-tasks, they will be restored in the same order when the parentless task is checked.
+The program looks for all parentless tasks with a recurring date. If they contain sub-tasks, they will be restored in the same order when the parentless task is checked.
 
 ![See example](https://i.imgur.com/CIjB7MC.gif)
 
@@ -62,7 +62,7 @@ Autodoist will read your environment to retrieve your Todoist API key, so to run
 
     python autodoist.py -a <API Key>
     
-If you want to enable recursive-mode, run with the `-r` argument:
+If you want to enable recurring re-use mode, run with the `-r` argument:
 
     python autodoist.py -a <API Key> -r
     
