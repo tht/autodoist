@@ -47,7 +47,7 @@ Recurring lists
 
 The program looks for all parentless tasks with a recurring date. If they contain sub-tasks, they will be restored in the same order when the parentless task is checked.
 
-![See example](https://i.imgur.com/CIjB7MC.gif)
+![See example](https://i.imgur.com/WKKd14o.gif)
 
 
 Executing Autodoist
