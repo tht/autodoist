@@ -144,7 +144,6 @@ def main():
             logging.exception('Error trying to sync with Todoist API: %s' % str(e))
         else:
             for project in api.projects.all():
-                print(project.data['name'])
 
                 # Get project type
                 project_type, project_type_changed = get_project_type(project)
@@ -236,7 +235,7 @@ def main():
                         
                         # Add labels to top items if they have no childern
                         # if len(child_items) == 0:
-                        if len(child_items) >= 0:
+                        if len(child_items) == 0:
                             if item['parent_id'] == 0:
                                 if project_type == 'serial':
                                     if not first_found:
@@ -262,7 +261,8 @@ def main():
                             # Process serial tagged items
                             if item_type == 'serial':
                                 for child_item in child_items:
-                                    if child_item['checked'] == 0 and not child_first_found and label_id in item['labels']:
+                                    if child_item['checked'] == 0 and not child_first_found and not first_found:
+                                        first_found = True
                                         child_first_found = True
                                         add_label(child_item, label_id)
                                         child_item['parent_type'] = item_type
