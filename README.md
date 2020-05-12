@@ -23,6 +23,9 @@ Make sure the label exists in your Todoist before running the program. Todoist P
 
 Sequential list processing
 --------------------------
+
+- This feature currently has a known bug, it will be patched very soon -
+
 If a project or parentless task ends with `--`, the sub-tasks will be treated as a priority queue and the most important will be labeled `@next_action`. Importance is determined by order in the list.
 
 ![Serial task](https://i.imgur.com/SUkhPiE.gif)
