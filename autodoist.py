@@ -12,7 +12,7 @@ from datetime import datetime
 def main():
     """Main process function."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('-a', '--api_key', help='Todoist API Key')
+    parser.add_argument('-a', '--api_key', help='Todoist API Key', default="a")
     parser.add_argument('-l', '--label', help='The next action label to use', default='next_action')
     parser.add_argument('-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
     parser.add_argument('-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
@@ -144,6 +144,7 @@ def main():
             logging.exception('Error trying to sync with Todoist API: %s' % str(e))
         else:
             for project in api.projects.all():
+                print(project.data['name'])
 
                 # Get project type
                 project_type, project_type_changed = get_project_type(project)
@@ -234,7 +235,8 @@ def main():
                             item_type = project_type
                         
                         # Add labels to top items if they have no childern
-                        if len(child_items) == 0:
+                        # if len(child_items) == 0:
+                        if len(child_items) >= 0:
                             if item['parent_id'] == 0:
                                 if project_type == 'serial':
                                     if not first_found:
