@@ -169,8 +169,9 @@ def main():
 
                 for item in items:
 
-                    # Check for child_items
-                    child_items = list(filter(lambda x: x['parent_id'] == item['id'], items))
+                    # Determine which child_items exist that have not been checked yet
+                    non_checked_items = list(filter(lambda x: x['checked'] == 0, items))
+                    child_items = list(filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
                     
                     if not args.recurring:
                         try:
