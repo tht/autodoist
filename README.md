@@ -6,6 +6,12 @@ This program adds two major functionalities to Todoist to help automate your wor
 1) Assign automatic `@next_action` labels for a more GTD-like workflow
 2) Enable re-use of subtasks in lists with a recurring date
 
+If this tool helped you out, I would really appreciate your support by providing me with some coffee!
+
+<a href=https://ko-fi.com/hoffelhas>
+ <img src="https://uploads-ssl.webflow.com/5c14e387dab576fe667689cf/5cbed8a4ae2b88347c06c923_BuyMeACoffee_blue-p-500.png" width="150">
+</a>
+
 Requirements
 ============
 
