@@ -18,9 +18,9 @@ def main():
     parser.add_argument('-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
     parser.add_argument('--debug', help='Enable debugging', action='store_true')
     parser.add_argument('--inbox', help='The method the Inbox project should be processed',
-                        default=None, choices=['parallel', 'serial'])
+                        default=None, choices=['parallel', 'sequential'])
     parser.add_argument('--parallel_suffix', default='//')
-    parser.add_argument('--serial_suffix', default='--')
+    parser.add_argument('--sequential_suffix', default='--')
     parser.add_argument('--hide_future', help='Hide future dated next actions until the specified number of days',
                         default=7, type=int)
     parser.add_argument('--onetime', help='Update Todoist once and exit', action='store_true')
@@ -68,7 +68,7 @@ def main():
         return api, label_id
 
     def get_type(object,key):
-        len_suffix = [len(args.parallel_suffix), len(args.serial_suffix)]
+        len_suffix = [len(args.parallel_suffix), len(args.sequential_suffix)]
 
         try:
             old_type = object[key]
@@ -85,8 +85,8 @@ def main():
             current_type = args.inbox
         elif name[-len_suffix[0]:] == args.parallel_suffix:
             current_type =  'parallel'
-        elif name[-len_suffix[1]:] == args.serial_suffix:
-            current_type = 'serial'
+        elif name[-len_suffix[1]:] == args.sequential_suffix:
+            current_type = 'sequential'
         else:
             current_type = None
 
@@ -164,10 +164,11 @@ def main():
                 # If project type has been changed, clean everything for good measure
                 if project_type_changed == 1:
                     [remove_label(item, label_id) for item in items]
-                        
-                first_found = False
 
                 for item in items:
+
+                    # To determine if a task was found              
+                    first_found = False
 
                     # Determine which child_items exist that have not been checked yet
                     non_checked_items = list(filter(lambda x: x['checked'] == 0, items))
@@ -219,7 +220,7 @@ def main():
 
                     # Check item type
                     item_type, item_type_changed = get_item_type(item, project_type)                           
-                    # logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
+                    logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
                     
                     if project_type is None and item_type is None and project_type_changed == 1:
                         # Clean the item and its children
@@ -238,7 +239,7 @@ def main():
                         # if len(child_items) == 0:
                         if len(child_items) == 0:
                             if item['parent_id'] == 0:
-                                if project_type == 'serial':
+                                if project_type == 'sequential':
                                     if not first_found:
                                         add_label(item, label_id)
                                         first_found = True
@@ -259,8 +260,8 @@ def main():
                             if item_type_changed == 1:
                                 [remove_label(child_item, label_id) for child_item in child_items]
 
-                            # Process serial tagged items
-                            if item_type == 'serial':
+                            # Process sequential tagged items
+                            if item_type == 'sequential':
                                 for child_item in child_items:
                                     if child_item['checked'] == 0 and not child_first_found and not first_found:
                                         first_found = True
