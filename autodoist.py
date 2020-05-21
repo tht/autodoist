@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# Autodoist v1.0.3
 
 import logging
 import argparse
@@ -12,7 +13,7 @@ from datetime import datetime
 def main():
     """Main process function."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('-a', '--api_key', help='Todoist API Key', default="a")
+    parser.add_argument('-a', '--api_key', help='Todoist API Key')
     parser.add_argument('-l', '--label', help='The next action label to use', default='next_action')
     parser.add_argument('-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
     parser.add_argument('-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
@@ -26,6 +27,9 @@ def main():
     parser.add_argument('--onetime', help='Update Todoist once and exit', action='store_true')
     parser.add_argument('--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
     args = parser.parse_args()
+
+    args.api_key = 'b8671dd3f1408956f9d727d9bd94812c835bbfa8'
+    args.recurring = True
 
     def initialise(args):
         # Set debug
@@ -64,7 +68,7 @@ def main():
         else:
             logging.error("Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
             sys.exit(1)
-
+        
         return api, label_id
 
     def get_type(object,key):
@@ -165,17 +169,21 @@ def main():
                 if project_type_changed == 1:
                     [remove_label(item, label_id) for item in items]
 
+                # To determine if a task was found on sequential level              
+                first_found_project = False
+                first_found_item = True                
+
                 for item in items:
-
-                    # To determine if a task was found              
-                    first_found = False
-
-                    # Determine which child_items exist that have not been checked yet
+                    
+                    # Determine which child_items exist, both all and the ones that have not been checked yet
                     non_checked_items = list(filter(lambda x: x['checked'] == 0, items))
+                    child_items_all = list(filter(lambda x: x['parent_id'] == item['id'], items))
                     child_items = list(filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
                     
+                    # Logic for recurring lists
                     if not args.recurring:
                         try:
+                            # If old label is present, reset it
                             if item['r_tag'] == 1:
                                 item['r_tag'] = 0
                         except Exception as e:
@@ -185,14 +193,16 @@ def main():
                             try:
                                 if item['due']['is_recurring']:
                                     try:
+                                        # Check if the T0 task date has changed
                                         if item['due']['date'] != item['old_date']:
                                             # Save the new date
                                             item['due']['date'] = item['old_date']
 
                                             # Mark children for action
-                                            for child_item in child_items:
+                                            for child_item in child_items_all:
                                                 child_item['r_tag'] = 1
                                     except Exception as e:
+                                        # If date has never been saved before, create a new entry
                                         logging.debug('New recurring task detected: %s' % str(e))
                                         item['old_date'] = item['due']['date']
                                         api.items.update(item['id'])
@@ -208,7 +218,7 @@ def main():
                                 item['r_tag'] = 0
                                 api.items.update(item['id'])
 
-                                for child_item in child_items:
+                                for child_item in child_items_all:
                                     child_item['r_tag'] = 1
                         except Exception as e:
                             logging.debug('Child not recurring: %s' % str(e))
@@ -231,18 +241,23 @@ def main():
                         # We can immediately continue
                         continue
                     else:
-                        # Define item_type if not present
+                        # Define the item_type
                         if item_type is None:
                             item_type = project_type
-                        
-                        # Add labels to top items if they have no childern
-                        # if len(child_items) == 0:
+                        else:
+                            # Reset in case that task is tagged as sequential
+                            first_found_item = False
+
+                        # If it is a parentless task
                         if len(child_items) == 0:
                             if item['parent_id'] == 0:
                                 if project_type == 'sequential':
-                                    if not first_found:
+                                    if not first_found_project:
                                         add_label(item, label_id)
-                                        first_found = True
+                                        first_found_project = True
+                                    elif not first_found_item:
+                                        add_label(item, label_id)
+                                        first_found_item = True                                        
                                     else:
                                         remove_label(item, label_id)
                                 elif project_type == 'parallel':
@@ -260,11 +275,16 @@ def main():
                             if item_type_changed == 1:
                                 [remove_label(child_item, label_id) for child_item in child_items]
 
-                            # Process sequential tagged items
+                            # Process sequential tagged items (item_type can overrule project_type)
                             if item_type == 'sequential':
                                 for child_item in child_items:
-                                    if child_item['checked'] == 0 and not child_first_found and not first_found:
-                                        first_found = True
+                                    if child_item['checked'] == 0 and not child_first_found and not first_found_project:
+                                        first_found_project = True
+                                        child_first_found = True
+                                        add_label(child_item, label_id)
+                                        child_item['parent_type'] = item_type
+                                    elif child_item['checked'] == 0 and not child_first_found and not first_found_item:
+                                        first_found_item = True
                                         child_first_found = True
                                         add_label(child_item, label_id)
                                         child_item['parent_type'] = item_type
@@ -277,8 +297,8 @@ def main():
                                         child_first_found = True
                                         add_label(child_item, label_id)
                                         child_item['parent_type'] = item_type
-
-                            # Remove the label from the parent
+                            
+                            # Remove the label from the parent (needed for if recurring list is reset)
                             if item_type and child_first_found:
                                 remove_label(item, label_id)
 
@@ -289,7 +309,6 @@ def main():
                             if future_diff >= (args.hide_future * 86400):
                                 remove_label(item, label_id)
                                 continue
-
             if len(api.queue):
                 logging.debug('%d changes queued for sync... commiting to Todoist.', len(api.queue))
                 api.commit()
