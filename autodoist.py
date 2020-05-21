@@ -28,9 +28,6 @@ def main():
     parser.add_argument('--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
     args = parser.parse_args()
 
-    args.api_key = 'b8671dd3f1408956f9d727d9bd94812c835bbfa8'
-    args.recurring = True
-
     def initialise(args):
         # Set debug
         if args.debug:
