@@ -22,7 +22,7 @@ The program looks for pre-defined tags in the name of every project and parentle
 
 Projects and parentless tasks can be tagged independently from each other to create the required functionality. If this tag is not defined, it will not activate this functionality. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
 
-Make sure the label ```next_action``` exists in your Todoist before running the program. The default label can be changed, see the example at section [Additional Arguments](#additional-arguments) below. Todoist Premium is required in order to use labels and to make this functionality possible.
+Make sure the label ```next_action``` exists in your Todoist before running the program. The default label can be changed, see the example given at [additional arguments](#additional-arguments). Todoist Premium is required in order to use labels and to make this functionality possible.
 
 ## Sequential list processing
 
