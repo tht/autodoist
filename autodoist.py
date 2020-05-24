@@ -3,29 +3,40 @@
 
 import logging
 import argparse
-
-from todoist.api import TodoistAPI
-
+import requests
 import time
 import sys
 from datetime import datetime
 
+from todoist.api import TodoistAPI
+
+
 def main():
+
+    # Version
+    current_version = 'v1.1'
+
     """Main process function."""
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--api_key', help='Todoist API Key')
-    parser.add_argument('-l', '--label', help='The next action label to use', default='next_action')
-    parser.add_argument('-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
-    parser.add_argument('-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
-    parser.add_argument('--debug', help='Enable debugging', action='store_true')
+    parser.add_argument(
+        '-l', '--label', help='The next action label to use', default='next_action')
+    parser.add_argument(
+        '-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
+    parser.add_argument(
+        '-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
+    parser.add_argument('--debug', help='Enable debugging',
+                        action='store_true')
     parser.add_argument('--inbox', help='The method the Inbox project should be processed',
                         default=None, choices=['parallel', 'sequential'])
     parser.add_argument('--parallel_suffix', default='//')
     parser.add_argument('--sequential_suffix', default='--')
     parser.add_argument('--hide_future', help='Hide future dated next actions until the specified number of days',
                         default=7, type=int)
-    parser.add_argument('--onetime', help='Update Todoist once and exit', action='store_true')
-    parser.add_argument('--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
+    parser.add_argument(
+        '--onetime', help='Update Todoist once and exit', action='store_true')
+    parser.add_argument(
+        '--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
     args = parser.parse_args()
 
     def initialise(args):
@@ -36,8 +47,8 @@ def main():
             log_level = logging.INFO
 
         logging.basicConfig(handlers=[logging.FileHandler('DEBUG.log', 'w+', 'utf-8')],
-                            level=log_level, 
-                            format='%(asctime)s %(levelname)-8s %(message)s', 
+                            level=log_level,
+                            format='%(asctime)s %(levelname)-8s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
 
         # Check we have a API key
@@ -61,31 +72,59 @@ def main():
         labels = api.labels.all(lambda x: x['name'] == args.label)
         if len(labels) > 0:
             label_id = labels[0]['id']
-            logging.debug('Label \'%s\' found as label id %d', args.label, label_id)
+            logging.debug('Label \'%s\' found as label id %d',
+                          args.label, label_id)
         else:
-            logging.error("Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
+            logging.error(
+                "Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
             sys.exit(1)
-        
+
         return api, label_id
 
-    def get_type(object,key):
+    def check_for_update(current_version):
+        updateurl = 'https://api.github.com/repos/Hoffelhas/autodoist/releases'
+
+        try:
+            r = requests.get(updateurl)
+            r.raise_for_status()
+            release_info_json = r.json()
+
+            if not current_version == release_info_json[0]['tag_name']:
+                logging.info("Your version is not up-to-date! \nYour version: {}\nLatest version: {}\nSee latest version at: {}".format(
+                    current_version, release_info_json[0]['tag_name'], release_info_json[0]['html_url']))
+                return 1
+            else:
+                return 0
+        except requests.exceptions.ConnectionError as e:
+            logging.error(
+                "Error while checking for updates (Connection error): {}".format(e))
+            return 1
+        except requests.exceptions.HTTPError as e:
+            logging.error(
+                "Error while checking for updates (HTTP error): {}".format(e))
+            return 1
+        except requests.exceptions.RequestException as e:
+            logging.error("Error while checking for updates: {}".format(e))
+            return 1
+
+    def get_type(object, key):
         len_suffix = [len(args.parallel_suffix), len(args.sequential_suffix)]
 
         try:
             old_type = object[key]
         except Exception as e:
             # logging.debug('No defined project_type: %s' % str(e))
-            old_type = None   
+            old_type = None
 
         try:
             name = object['name'].strip()
         except:
             name = object['content'].strip()
-        
+
         if name == 'Inbox':
             current_type = args.inbox
         elif name[-len_suffix[0]:] == args.parallel_suffix:
-            current_type =  'parallel'
+            current_type = 'parallel'
         elif name[-len_suffix[1]:] == args.sequential_suffix:
             current_type = 'sequential'
         else:
@@ -102,21 +141,22 @@ def main():
 
     def get_project_type(project_object):
         """Identifies how a project should be handled."""
-        project_type, project_type_changed = get_type(project_object,'project_type')
+        project_type, project_type_changed = get_type(
+            project_object, 'project_type')
 
         return project_type, project_type_changed
 
     def get_item_type(item, project_type):
         """Identifies how a item with sub items should be handled."""
-        
+
         if project_type is None and item['parent_id'] != 0:
             try:
                 item_type = item['parent_type']
                 item_type_changed = 1
             except:
-                item_type, item_type_changed = get_type(item,'item_type') 
+                item_type, item_type_changed = get_type(item, 'item_type')
         else:
-            item_type, item_type_changed = get_type(item,'item_type')
+            item_type, item_type_changed = get_type(item, 'item_type')
 
         return item_type, item_type_changed
 
@@ -133,7 +173,10 @@ def main():
             logging.debug('Removing \'%s\' of its label', item['content'])
             labels.remove(label)
             api.items.update(item['id'], labels=labels)
-    
+
+    # Check for updates
+    check_for_update(current_version)
+
     # Initialise api
     api, label_id = initialise(args)
 
@@ -142,41 +185,49 @@ def main():
         try:
             api.sync()
         except Exception as e:
-            logging.exception('Error trying to sync with Todoist API: %s' % str(e))
+            logging.exception(
+                'Error trying to sync with Todoist API: %s' % str(e))
         else:
             for project in api.projects.all():
 
                 # Get project type
                 project_type, project_type_changed = get_project_type(project)
-                logging.debug('Project \'%s\' being processed as %s', project['name'], project_type)
-                
+                logging.debug('Project \'%s\' being processed as %s',
+                              project['name'], project_type)
+
                 # Get all items for the project
-                items = api.items.all(lambda x: x['project_id'] == project['id'])
-                
+                items = api.items.all(
+                    lambda x: x['project_id'] == project['id'])
+
                 # Change top parents_id in order to sort later on
                 for item in items:
                     if not item['parent_id']:
                         item['parent_id'] = 0
 
                 # Sort by parent_id and filter for completable items
-                items = sorted(items, key=lambda x: (x['parent_id'], x['child_order']))
-                items = list(filter(lambda x: not x['content'].startswith('*'), items))
+                items = sorted(items, key=lambda x: (
+                    x['parent_id'], x['child_order']))
+                items = list(
+                    filter(lambda x: not x['content'].startswith('*'), items))
 
                 # If project type has been changed, clean everything for good measure
                 if project_type_changed == 1:
                     [remove_label(item, label_id) for item in items]
 
-                # To determine if a task was found on sequential level              
+                # To determine if a task was found on sequential level
                 first_found_project = False
-                first_found_item = True                
+                first_found_item = True
 
                 for item in items:
-                    
+
                     # Determine which child_items exist, both all and the ones that have not been checked yet
-                    non_checked_items = list(filter(lambda x: x['checked'] == 0, items))
-                    child_items_all = list(filter(lambda x: x['parent_id'] == item['id'], items))
-                    child_items = list(filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
-                    
+                    non_checked_items = list(
+                        filter(lambda x: x['checked'] == 0, items))
+                    child_items_all = list(
+                        filter(lambda x: x['parent_id'] == item['id'], items))
+                    child_items = list(
+                        filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
+
                     # Logic for recurring lists
                     if not args.recurring:
                         try:
@@ -200,14 +251,16 @@ def main():
                                                 child_item['r_tag'] = 1
                                     except Exception as e:
                                         # If date has never been saved before, create a new entry
-                                        logging.debug('New recurring task detected: %s' % str(e))
+                                        logging.debug(
+                                            'New recurring task detected: %s' % str(e))
                                         item['old_date'] = item['due']['date']
                                         api.items.update(item['id'])
-                                    
+
                             except Exception as e:
-                                logging.debug('Parent not recurring: %s' % str(e))
+                                logging.debug(
+                                    'Parent not recurring: %s' % str(e))
                                 pass
-                        
+
                         try:
                             if item['r_tag'] == 1:
                                 item.update(checked=0)
@@ -220,15 +273,17 @@ def main():
                         except Exception as e:
                             logging.debug('Child not recurring: %s' % str(e))
                             pass
-                        
+
                     # Skip processing an item if it has already been checked
                     if item['checked'] == 1:
                         continue
 
                     # Check item type
-                    item_type, item_type_changed = get_item_type(item, project_type)                           
-                    logging.debug('Identified \'%s\' as %s type', item['content'], item_type)
-                    
+                    item_type, item_type_changed = get_item_type(
+                        item, project_type)
+                    logging.debug('Identified \'%s\' as %s type',
+                                  item['content'], item_type)
+
                     if project_type is None and item_type is None and project_type_changed == 1:
                         # Clean the item and its children
                         remove_label(item, label_id)
@@ -254,7 +309,7 @@ def main():
                                         first_found_project = True
                                     elif not first_found_item:
                                         add_label(item, label_id)
-                                        first_found_item = True                                        
+                                        first_found_item = True
                                     else:
                                         remove_label(item, label_id)
                                 elif project_type == 'parallel':
@@ -263,14 +318,15 @@ def main():
                                     # If only the item type has been defined
                                     if item_type:
                                         add_label(item, label_id)
-                    
+
                         # If there are children, label them instead
                         if len(child_items) > 0:
                             child_first_found = False
 
                             # Check if state has changed, if so clean for good measure
                             if item_type_changed == 1:
-                                [remove_label(child_item, label_id) for child_item in child_items]
+                                [remove_label(child_item, label_id)
+                                 for child_item in child_items]
 
                             # Process sequential tagged items (item_type can overrule project_type)
                             if item_type == 'sequential':
@@ -294,20 +350,23 @@ def main():
                                         child_first_found = True
                                         add_label(child_item, label_id)
                                         child_item['parent_type'] = item_type
-                            
+
                             # Remove the label from the parent (needed for if recurring list is reset)
                             if item_type and child_first_found:
                                 remove_label(item, label_id)
 
                         # If item is too far in the future, remove the next_action tag and skip
                         if args.hide_future > 0 and 'due_date_utc' in item.data and item['due_date_utc'] is not None:
-                            due_date = datetime.strptime(item['due_date_utc'], '%a %d %b %Y %H:%M:%S +0000')
-                            future_diff = (due_date - datetime.utcnow()).total_seconds()
+                            due_date = datetime.strptime(
+                                item['due_date_utc'], '%a %d %b %Y %H:%M:%S +0000')
+                            future_diff = (
+                                due_date - datetime.utcnow()).total_seconds()
                             if future_diff >= (args.hide_future * 86400):
                                 remove_label(item, label_id)
                                 continue
             if len(api.queue):
-                logging.debug('%d changes queued for sync... commiting to Todoist.', len(api.queue))
+                logging.debug(
+                    '%d changes queued for sync... commiting to Todoist.', len(api.queue))
                 api.commit()
             else:
                 logging.debug('No changes queued, skipping sync.')
@@ -318,6 +377,7 @@ def main():
 
         logging.debug('Sleeping for %d seconds', args.delay)
         time.sleep(args.delay)
+
 
 if __name__ == '__main__':
     main()
