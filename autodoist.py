@@ -1,17 +1,15 @@
 #!/usr/bin/python3
-# Autodoist v1.0.3
 
+from todoist.api import TodoistAPI
+from datetime import datetime
+import sys
+import time
+import requests
+import argparse
+import logging
 global overview_item_ids
 global overview_item_labels
 
-import logging
-import argparse
-import requests
-import time
-import sys
-from datetime import datetime
-
-from todoist.api import TodoistAPI
 
 def main():
 
@@ -24,7 +22,7 @@ def main():
     parser.add_argument(
         '-l', '--label', help='The next action label to use', default='next_action')
     parser.add_argument(
-        '-d', '--delay', help='Specify the delay in seconds between syncs', default=10, type=int)
+        '-d', '--delay', help='Specify the delay in seconds between syncs', default=5, type=int)
     parser.add_argument(
         '-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
     parser.add_argument('--debug', help='Enable debugging',
@@ -41,21 +39,25 @@ def main():
         '--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
     args = parser.parse_args()
 
+    # Set debug
+    if args.debug:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    logging.basicConfig(level=log_level,
+                        format='%(asctime)s %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        handlers=[logging.FileHandler(
+                            'debug.log', 'w+', 'utf-8'),
+                            logging.StreamHandler()]
+                        )
+
     def initialise(args):
-        # Set debug
-        if args.debug:
-            log_level = logging.DEBUG
-        else:
-            log_level = logging.INFO
-
-        logging.basicConfig(handlers=[logging.FileHandler('DEBUG.log', 'w+', 'utf-8')],
-                            level=log_level,
-                            format='%(asctime)s %(levelname)-8s %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
-
+        
         # Check we have a API key
         if not args.api_key:
-            logging.error('No API key set, exiting...')
+            logging.error("\n\nNo API key set. Run Autodoist with '-a <YOUR_API_KEY>'\n")
             sys.exit(1)
 
         # Run the initial sync
@@ -78,8 +80,10 @@ def main():
                           args.label, label_id)
         else:
             logging.error(
-                "Label \'%s\' doesn't exist, please create it or change TODOIST_NEXT_ACTION_LABEL.", args.label)
+                "\n\nLabel \'%s\' doesn't exist in your Todoist. Please create it or use your custom label by running Autodoist with the argument '-l <YOUR_EXACT_LABEL>'.\n", args.label)
             sys.exit(1)
+
+        logging.info("\nAutodoist has connected and is running fine!\n")
 
         return api, label_id
 
@@ -92,7 +96,7 @@ def main():
             release_info_json = r.json()
 
             if not current_version == release_info_json[0]['tag_name']:
-                logging.info("Your version is not up-to-date! \nYour version: {}\nLatest version: {}\nSee latest version at: {}".format(
+                logging.warning("\n\nYour version is not up-to-date! \nYour version: {}. Latest version: {}\nSee latest version at: {}\n".format(
                     current_version, release_info_json[0]['tag_name'], release_info_json[0]['html_url']))
                 return 1
             else:
@@ -168,13 +172,13 @@ def main():
             labels = item['labels']
             logging.debug('Updating \'%s\' with label', item['content'])
             labels.append(label)
-            
+
             try:
                 overview_item_ids[str(item['id'])] += 1
             except:
                 overview_item_ids[str(item['id'])] = 1
             overview_item_labels[str(item['id'])] = labels
-                
+
     def remove_label(item, label):
         if label in item['labels']:
             labels = item['labels']
@@ -188,10 +192,11 @@ def main():
             overview_item_labels[str(item['id'])] = labels
 
     def update_labels(label_id):
-        filtered_overview_ids = [k for k, v in overview_item_ids.items() if v != 0]
+        filtered_overview_ids = [
+            k for k, v in overview_item_ids.items() if v != 0]
         for item_id in filtered_overview_ids:
             labels = overview_item_labels[item_id]
-            api.items.update(item_id, labels = labels)
+            api.items.update(item_id, labels=labels)
 
     # Check for updates
     check_for_update(current_version)
@@ -216,7 +221,7 @@ def main():
             # Get project type
             project_type, project_type_changed = get_project_type(project)
             logging.debug('Project \'%s\' being processed as %s',
-                            project['name'], project_type)
+                          project['name'], project_type)
 
             # Get all items for the project
             items = api.items.all(
@@ -314,7 +319,7 @@ def main():
                 item_type, item_type_changed = get_item_type(
                     item, project_type)
                 logging.debug('Identified \'%s\' as %s type',
-                                item['content'], item_type)
+                              item['content'], item_type)
 
                 # Check the item_type of the project or parent
                 if item_type is None:
@@ -369,6 +374,7 @@ def main():
                             else:
                                 # Clean for good measure
                                 remove_label(child_item, label_id)
+
                     # Process parallel tagged items or untagged parents
                     elif item_type == 'parallel':
                         remove_label(item, label_id)
@@ -392,11 +398,16 @@ def main():
         update_labels(label_id)
 
         if len(api.queue):
-            logging.debug(
-                '%d changes queued for sync... commiting to Todoist.', len(api.queue))
+            len_api_q = len(api.queue)
             api.commit()
+            if len_api_q == 1:    
+                logging.info(
+                    '%d change committed to Todoist.', len_api_q)
+            else:
+                logging.info(
+                    '%d changes committed to Todoist.', len_api_q)
         else:
-            logging.debug('No changes queued, skipping sync.')
+            logging.info('No changes in queue, skipping sync.')
 
         # If onetime is set, exit after first execution.
         if args.onetime:
