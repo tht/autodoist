@@ -77,7 +77,7 @@ Or to change the suffix tags:
     python autodoist.py --parallel_suffix <tag>
     python autodoist.py --serial_suffix <tag>
 
-In addition, if you experience issues with syncing you can change the api syncing time (default 10 seconds):
+In addition, if you experience issues with syncing you can increase the api syncing time (default 5 seconds):
     
     python autodoist.py --delay <time in seconds>
 
