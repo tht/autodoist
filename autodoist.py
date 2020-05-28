@@ -281,10 +281,17 @@ def main():
                                         # Save the new date
                                         item['old_date'] = item['due']['date']
                                         api.items.update(item['id'])
+                                        #item.update(due={'date': '2020-05-27', 'is_recurring': True, 'string': 'every day'})
 
                                         # Mark children for action
                                         for child_item in child_items_all:
                                             child_item['r_tag'] = 1
+
+                                        # Check the custom end-of-day time
+                                        if item['content'] == 'Rtest':
+                                            item.update(due={'date': '2020-05-28', 'is_recurring': True, 'string': 'every day'})
+                                            api.commit()
+
                                 except Exception as e:
                                     # If date has never been saved before, create a new entry
                                     logging.debug(
