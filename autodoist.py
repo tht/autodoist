@@ -7,14 +7,14 @@ import time
 import requests
 import argparse
 import logging
+from datetime import datetime
 global overview_item_ids
 global overview_item_labels
-
 
 def main():
 
     # Version
-    current_version = 'v1.1'
+    current_version = 'v1.2'
 
     """Main process function."""
     parser = argparse.ArgumentParser()
@@ -37,6 +37,8 @@ def main():
         '--onetime', help='Update Todoist once and exit', action='store_true')
     parser.add_argument(
         '--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
+    parser.add_argument(
+        '-e', '--end', help='Enter a number from 1-24 to define which hour is used as end-of-day time.', type=int)
     args = parser.parse_args()
 
     # Set debug
@@ -58,6 +60,10 @@ def main():
         # Check we have a API key
         if not args.api_key:
             logging.error("\n\nNo API key set. Run Autodoist with '-a <YOUR_API_KEY>'\n")
+            sys.exit(1)
+
+        if args.end < 1 or args.end > 24:
+            logging.error("\n\nPlease choose a number from 0 to 24 to indicate which hour is used as alternative end-of-day time.\n")
             sys.exit(1)
 
         # Run the initial sync
@@ -273,24 +279,51 @@ def main():
                 # If option turned on, start recurring logic
                 else:
                     if item['parent_id'] == 0:
+                        if item['content'] == 'Rtask1':
+                            print('temp')
                         try:
                             if item['due']['is_recurring']:
                                 try:
                                     # Check if the T0 task date has changed
                                     if item['due']['date'] != item['old_date']:
-                                        # Save the new date
-                                        item['old_date'] = item['due']['date']
-                                        api.items.update(item['id'])
-                                        #item.update(due={'date': '2020-05-27', 'is_recurring': True, 'string': 'every day'})
+                                        
+                                        # Determine current hour
+                                        t = datetime.today()
+                                        current_hour = t.hour
+                                        
+                                        # Check if current time is before our end-of-day
+                                        if (args.end - current_hour) > 0:
+
+                                            # Determine the difference in days set by todoist
+                                            nd = [int(x) for x in item['due']['date'].split('-')]
+                                            od = [int(x) for x in item['old_date'].split('-')]
+                                            
+                                            new_date = datetime(nd[0], nd[1], nd[2])
+                                            old_date = datetime(od[0], od[1], od[2])
+                                            today = datetime(t.year, t.month, t.day)
+                                            days_difference = (new_date-today).days
+                                            days_overdue = (today - old_date).days
+                                            
+                                            # Only apply if overdue and if it's a daily recurring tasks
+                                            if days_overdue >= 1 and days_difference == 1:
+
+                                                # Find curreny date in string format
+                                                today_str = [str(x) for x in [today.year, today.month, today.day]]
+                                                if len(today_str[1]) == 1:
+                                                    today_str[1] = ''.join(['0',today_str[1]])
+                                                
+                                                # Update due-date to today
+                                                item_due = item['due']
+                                                item_due['date'] = '-'.join(today_str)
+                                                item.update(due=item_due)
+                                                # item.update(due={'date': '2020-05-29', 'is_recurring': True, 'string': 'every day'})
+
+                                        # Save the new date for reference us
+                                        item.update(old_date=item['due']['date'])
 
                                         # Mark children for action
                                         for child_item in child_items_all:
                                             child_item['r_tag'] = 1
-
-                                        # Check the custom end-of-day time
-                                        if item['content'] == 'Rtest':
-                                            item.update(due={'date': '2020-05-28', 'is_recurring': True, 'string': 'every day'})
-                                            api.commit()
 
                                 except Exception as e:
                                     # If date has never been saved before, create a new entry
