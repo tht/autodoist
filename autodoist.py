@@ -11,34 +11,51 @@ from datetime import datetime
 global overview_item_ids
 global overview_item_labels
 
+
+def make_wide(formatter, w=120, h=36):
+    """Return a wider HelpFormatter, if possible."""
+    try:
+        # https://stackoverflow.com/a/5464440
+        # beware: "Only the name of this class is considered a public API."
+        kwargs = {'width': w, 'max_help_position': h}
+        formatter(None, **kwargs)
+        return lambda prog: formatter(prog, **kwargs)
+    except TypeError:
+        warnings.warn("argparse help formatter failed, falling back.")
+        return formatter
+
+
 def main():
 
     # Version
     current_version = 'v1.2'
 
     """Main process function."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-a', '--api_key', help='Todoist API Key')
+    parser = argparse.ArgumentParser(
+        formatter_class=make_wide(argparse.HelpFormatter, w=110, h=50))
+    parser.add_argument('-a', '--api_key', help='Takes your Todoist API Key.', type=str)
     parser.add_argument(
-        '-l', '--label', help='The next action label to use', type=str)
+        '-l', '--label', help='Enable next action labelling. Define which label to use.', type=str)
     parser.add_argument(
-        '-d', '--delay', help='Specify the delay in seconds between syncs', default=5, type=int)
+        '-r', '--recurring', help='Enable regeneration of sub-tasks in recurring lists.', action='store_true')
     parser.add_argument(
-        '-r', '--recurring', help='Enable re-use of recurring lists', action='store_true')
-    parser.add_argument('--debug', help='Enable debugging',
-                        action='store_true')
-    parser.add_argument('--inbox', help='The method the Inbox project should be processed',
-                        default=None, choices=['parallel', 'sequential'])
-    parser.add_argument('--parallel_suffix', default='//')
-    parser.add_argument('--sequential_suffix', default='--')
-    parser.add_argument('--hide_future', help='Hide future dated next actions until the specified number of days',
+        '-e', '--end', help='Enable alternative end-of-day time instead of default midnight. Enter a number from 1 to 24 to define which hour is used.', type=int)
+    parser.add_argument(
+        '-d', '--delay', help='Specify the delay in seconds between syncs (default 5).', default=5, type=int)
+    parser.add_argument(
+        '-ps', '--p_suffix', help='Change suffix for parallel labeling (default "//").', default='//')
+    parser.add_argument(
+        '-ss', '--s_suffix', help='Change suffix for sequential labeling (default "--").', default='--')
+    parser.add_argument('-hf', '--hide_future', help='Hide future dated next actions until the specified number of days (default 7).',
                         default=7, type=int)
     parser.add_argument(
-        '--onetime', help='Update Todoist once and exit', action='store_true')
+        '--onetime', help='Update Todoist once and exit.', action='store_true')
     parser.add_argument(
-        '--nocache', help='Disables caching data to disk for quicker syncing', action='store_true')
-    parser.add_argument(
-        '-e', '--end', help='Enter a number from 1-24 to define which hour is used as end-of-day time.', type=int)
+        '--nocache', help='Disables caching data to disk for quicker syncing.', action='store_true')
+    parser.add_argument('--debug', help='Enable detailed debugging in log.',
+                        action='store_true')
+    parser.add_argument('--inbox', help='The method the Inbox should be processed.',
+                        default=None, choices=['parallel', 'sequential'])
     args = parser.parse_args()
 
     # Set debug
@@ -56,16 +73,18 @@ def main():
                         )
 
     def initialise(args):
-        
+
         # Check we have a API key
         if not args.api_key:
-            logging.error("\n\nNo API key set. Run Autodoist with '-a <YOUR_API_KEY>'\n")
+            logging.error(
+                "\n\nNo API key set. Run Autodoist with '-a <YOUR_API_KEY>'\n")
             sys.exit(1)
 
         # Check if AEOD is used
         if args.end is not None:
             if args.end < 1 or args.end > 24:
-                logging.error("\n\nPlease choose a number from 1 to 24 to indicate which hour is used as alternative end-of-day time.\n")
+                logging.error(
+                    "\n\nPlease choose a number from 1 to 24 to indicate which hour is used as alternative end-of-day time.\n")
                 sys.exit(1)
         else:
             pass
@@ -95,10 +114,10 @@ def main():
             if len(labels) > 0:
                 label_id = labels[0]['id']
                 logging.debug('Label \'%s\' found as label id %d',
-                            args.label, label_id)
+                              args.label, label_id)
             else:
                 # Create a new label in Todoist
-                #TODO: 
+                #TODO:
                 logging.error(
                     "\n\nLabel \'%s\' doesn't exist in your Todoist. Please create it or use your custom label by running Autodoist with the argument '-l <YOUR_EXACT_LABEL>'.\n", args.label)
                 sys.exit(1)
@@ -137,7 +156,7 @@ def main():
             return 1
 
     def get_type(object, key):
-        len_suffix = [len(args.parallel_suffix), len(args.sequential_suffix)]
+        len_suffix = [len(args.p_suffix), len(args.s_suffix)]
 
         try:
             old_type = object[key]
@@ -152,9 +171,9 @@ def main():
 
         if name == 'Inbox':
             current_type = args.inbox
-        elif name[-len_suffix[0]:] == args.parallel_suffix:
+        elif name[-len_suffix[0]:] == args.p_suffix:
             current_type = 'parallel'
-        elif name[-len_suffix[1]:] == args.sequential_suffix:
+        elif name[-len_suffix[1]:] == args.s_suffix:
             current_type = 'sequential'
         else:
             current_type = None
@@ -233,12 +252,12 @@ def main():
         overview_item_labels = {}
 
         for project in api.projects.all():
-            
+
             if label_id is not None:
                 # Get project type
                 project_type, project_type_changed = get_project_type(project)
                 logging.debug('Project \'%s\' being processed as %s',
-                            project['name'], project_type)
+                              project['name'], project_type)
 
             # Get all items for the project
             items = api.items.all(
@@ -295,45 +314,54 @@ def main():
                         try:
                             if item['due']['is_recurring']:
                                 try:
-                                    if item['content'] == 'TASK':
-                                        print('b;ah')
                                     # Check if the T0 task date has changed
                                     if item['due']['date'] != item['date_old']:
-                                        
+
                                         if args.end is not None:
                                             # Determine current hour
                                             t = datetime.today()
                                             current_hour = t.hour
-                                            
+
                                             # Check if current time is before our end-of-day
                                             if (args.end - current_hour) > 0:
 
                                                 # Determine the difference in days set by todoist
-                                                nd = [int(x) for x in item['due']['date'].split('-')]
-                                                od = [int(x) for x in item['old_date'].split('-')]
-                                                
-                                                new_date = datetime(nd[0], nd[1], nd[2])
-                                                old_date = datetime(od[0], od[1], od[2])
-                                                today = datetime(t.year, t.month, t.day)
-                                                days_difference = (new_date-today).days
-                                                days_overdue = (today - old_date).days
-                                                
+                                                nd = [
+                                                    int(x) for x in item['due']['date'].split('-')]
+                                                od = [
+                                                    int(x) for x in item['date_old'].split('-')]
+
+                                                new_date = datetime(
+                                                    nd[0], nd[1], nd[2])
+                                                old_date = datetime(
+                                                    od[0], od[1], od[2])
+                                                today = datetime(
+                                                    t.year, t.month, t.day)
+                                                days_difference = (
+                                                    new_date-today).days
+                                                days_overdue = (
+                                                    today - old_date).days
+
                                                 # Only apply if overdue and if it's a daily recurring tasks
                                                 if days_overdue >= 1 and days_difference == 1:
 
                                                     # Find curreny date in string format
-                                                    today_str = [str(x) for x in [today.year, today.month, today.day]]
+                                                    today_str = [str(x) for x in [
+                                                        today.year, today.month, today.day]]
                                                     if len(today_str[1]) == 1:
-                                                        today_str[1] = ''.join(['0',today_str[1]])
-                                                    
+                                                        today_str[1] = ''.join(
+                                                            ['0', today_str[1]])
+
                                                     # Update due-date to today
                                                     item_due = item['due']
-                                                    item_due['date'] = '-'.join(today_str)
+                                                    item_due['date'] = '-'.join(
+                                                        today_str)
                                                     item.update(due=item_due)
                                                     # item.update(due={'date': '2020-05-29', 'is_recurring': True, 'string': 'every day'})
 
                                         # Save the new date for reference us
-                                        item.update(date_old=item['due']['date'])
+                                        item.update(
+                                            date_old=item['due']['date'])
 
                                         # Mark children for action
                                         if args.recurring is True:
@@ -363,20 +391,21 @@ def main():
                                 for child_item in child_items_all:
                                     child_item['r_tag'] = 1
                         except Exception as e:
-                            logging.debug('Child not recurring: %s' % item['content'])
+                            logging.debug('Child not recurring: %s' %
+                                          item['content'])
                             pass
-                
+
                 # If options turned on, start labelling logic
                 if label_id is not None:
                     # Skip processing an item if it has already been checked
                     if item['checked'] == 1:
                         continue
-                    
+
                     # Check item type
                     item_type, item_type_changed = get_item_type(
                         item, project_type)
                     logging.debug('Identified \'%s\' as %s type',
-                                item['content'], item_type)
+                                  item['content'], item_type)
 
                     # Check the item_type of the project or parent
                     if item_type is None:
@@ -458,7 +487,7 @@ def main():
         if len(api.queue):
             len_api_q = len(api.queue)
             api.commit()
-            if len_api_q == 1:    
+            if len_api_q == 1:
                 logging.info(
                     '%d change committed to Todoist.', len_api_q)
             else:
