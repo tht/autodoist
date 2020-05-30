@@ -1,6 +1,6 @@
 # Autodoist
 
-This program adds two major functionalities to Todoist to help automate your workflow:
+This program adds three major functionalities to Todoist to help automate your workflow:
 
 1) Assign automatic `@next_action` labels for a more GTD-like workflow
 2) Enable regeneration of sub-tasks in lists with a recurring date
