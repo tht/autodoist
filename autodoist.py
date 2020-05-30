@@ -21,7 +21,7 @@ def make_wide(formatter, w=120, h=36):
         formatter(None, **kwargs)
         return lambda prog: formatter(prog, **kwargs)
     except TypeError:
-        warnings.warn("argparse help formatter failed, falling back.")
+        logging.error("Argparse help formatter failed, falling back.")
         return formatter
 
 
@@ -72,6 +72,15 @@ def main():
                             logging.StreamHandler()]
                         )
 
+    def sync(api):
+        try:
+            logging.debug('Syncing the current state from the API')
+            api.sync()
+        except Exception as e:
+            logging.exception(
+                'Error trying to sync with Todoist API: %s' % str(e))
+            quit()
+    
     def initialise(args):
 
         # Check we have a API key
@@ -98,14 +107,7 @@ def main():
             api_arguments['cache'] = None
 
         api = TodoistAPI(**api_arguments)
-
-        try:
-            logging.debug('Syncing the current state from the API')
-            api.sync()
-        except Exception as e:
-            logging.exception(
-                'Error trying to sync with Todoist API: %s' % str(e))
-            quit()
+        sync(api)
 
         # Check if label argument is used
         if args.label is not None:
@@ -250,6 +252,7 @@ def main():
     while True:
         overview_item_ids = {}
         overview_item_labels = {}
+        sync(api)
 
         for project in api.projects.all():
 
@@ -502,7 +505,6 @@ def main():
 
         logging.debug('Sleeping for %d seconds', args.delay)
         time.sleep(args.delay)
-
 
 if __name__ == '__main__':
     main()
