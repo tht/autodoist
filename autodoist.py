@@ -279,8 +279,6 @@ def main():
                 # If option turned on, start recurring logic
                 else:
                     if item['parent_id'] == 0:
-                        if item['content'] == 'Rtask1':
-                            print('temp')
                         try:
                             if item['due']['is_recurring']:
                                 try:
