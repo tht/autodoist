@@ -82,6 +82,38 @@ def main():
                 'Error trying to sync with Todoist API: %s' % str(e))
             quit()
 
+    def query_yes_no(question, default="yes"):
+    # """Ask a yes/no question via raw_input() and return their answer.
+
+    # "question" is a string that is presented to the user.
+    # "default" is the presumed answer if the user just hits <Enter>.
+    #     It must be "yes" (the default), "no" or None (meaning
+    #     an answer is required of the user).
+
+    # The "answer" return value is True for "yes" or False for "no".
+    # """
+        valid = {"yes": True, "y": True, "ye": True,
+                "no": False, "n": False}
+        if default is None:
+            prompt = " [y/n] "
+        elif default == "yes":
+            prompt = " [Y/n] "
+        elif default == "no":
+            prompt = " [y/N] "
+        else:
+            raise ValueError("invalid default answer: '%s'" % default)
+
+        while True:
+            sys.stdout.write(question + prompt)
+            choice = input().lower()
+            if default is not None and choice == '':
+                return valid[default]
+            elif choice in valid:
+                return valid[choice]
+            else:
+                sys.stdout.write("Please respond with 'yes' or 'no' "
+                                "(or 'y' or 'n').\n")
+
     def initialise(args):
 
         # Check we have a API key
@@ -138,13 +170,21 @@ def main():
                 # Create a new label in Todoist
                 #TODO:
                 logging.info(
-                    "\n\nLabel '{}' doesn't exist in your Todoist. A new label is now created for you.\n".format(args.label))
+                    "\n\nLabel '{}' doesn't exist in your Todoist\n".format(args.label))
                 # sys.exit(1)
-                api.labels.add(args.label)
-                api.commit()
-                api.sync()
-                labels = api.labels.all(lambda x: x['name'] == args.label)
-                label_id = labels[0]['id']
+                response = query_yes_no('Do you want to automatically create this label?')
+
+                if response:
+                    api.labels.add(args.label)
+                    api.commit()
+                    api.sync()
+                    labels = api.labels.all(lambda x: x['name'] == args.label)
+                    label_id = labels[0]['id']
+                    logging.info('Label {} has been created!'.format(args.label))
+                else:
+                    logging.info('Exiting Autodoist.')
+                    exit(1)
+
         else:
             # Label functionality not needed
             label_id = None
