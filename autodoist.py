@@ -33,7 +33,8 @@ def main():
     """Main process function."""
     parser = argparse.ArgumentParser(
         formatter_class=make_wide(argparse.HelpFormatter, w=110, h=50))
-    parser.add_argument('-a', '--api_key', help='Takes your Todoist API Key.', type=str)
+    parser.add_argument('-a', '--api_key',
+                        help='Takes your Todoist API Key.', type=str)
     parser.add_argument(
         '-l', '--label', help='Enable next action labelling. Define which label to use.', type=str)
     parser.add_argument(
@@ -46,7 +47,7 @@ def main():
         '-ps', '--p_suffix', help='Change suffix for parallel labeling (default "//").', default='//')
     parser.add_argument(
         '-ss', '--s_suffix', help='Change suffix for sequential labeling (default "--").', default='--')
-    parser.add_argument('-hf', '--hide_future', help='Hide future dated next actions until the specified number of days (default 7).',
+    parser.add_argument('-hf', '--hide_future', help='Skip labelling future tasks after the specified number of days (default 7).',
                         default=7, type=int)
     parser.add_argument(
         '--onetime', help='Update Todoist once and exit.', action='store_true')
@@ -54,7 +55,7 @@ def main():
         '--nocache', help='Disables caching data to disk for quicker syncing.', action='store_true')
     parser.add_argument('--debug', help='Enable detailed debugging in log.',
                         action='store_true')
-    parser.add_argument('--inbox', help='The method the Inbox should be processed.',
+    parser.add_argument('--inbox', help='The method the Inbox should be processed with.',
                         default=None, choices=['parallel', 'sequential'])
     args = parser.parse_args()
 
@@ -80,7 +81,7 @@ def main():
             logging.exception(
                 'Error trying to sync with Todoist API: %s' % str(e))
             quit()
-    
+
     def initialise(args):
 
         # Check we have a API key
@@ -97,6 +98,22 @@ def main():
                 sys.exit(1)
         else:
             pass
+
+        # Show which modes are enabled:
+        modes = []
+        m_num = 0
+        for x in [args.label, args.recurring, args.end]:
+            if x:
+                modes.append('Enabled')
+                m_num += 1
+            else:
+                modes.append('Disabled')
+
+        logging.info("\nYou are running with the following functionalities:\n\n   Next action labelling mode: {}\n   Regenerate sub-tasks mode: {}\n   Shifted end-of-day mode: {}\n".format(*modes))
+
+        if m_num == 0:
+            logging.info("\n No functionality has been enabled. Please see --help for the available options.\n")
+            exit(0)
 
         # Run the initial sync
         logging.debug('Connecting to the Todoist API')
@@ -505,6 +522,7 @@ def main():
 
         logging.debug('Sleeping for %d seconds', args.delay)
         time.sleep(args.delay)
+
 
 if __name__ == '__main__':
     main()
