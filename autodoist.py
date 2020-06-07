@@ -109,7 +109,7 @@ def main():
             else:
                 modes.append('Disabled')
 
-        logging.info("\nYou are running with the following functionalities:\n\n   Next action labelling mode: {}\n   Regenerate sub-tasks mode: {}\n   Shifted end-of-day mode: {}\n".format(*modes))
+        logging.info("You are running with the following functionalities:\n\n   Next action labelling mode: {}\n   Regenerate sub-tasks mode: {}\n   Shifted end-of-day mode: {}\n".format(*modes))
 
         if m_num == 0:
             logging.info("\n No functionality has been enabled. Please see --help for the available options.\n")
@@ -137,14 +137,19 @@ def main():
             else:
                 # Create a new label in Todoist
                 #TODO:
-                logging.error(
-                    "\n\nLabel \'%s\' doesn't exist in your Todoist. Please create it or use your custom label by running Autodoist with the argument '-l <YOUR_EXACT_LABEL>'.\n", args.label)
-                sys.exit(1)
+                logging.info(
+                    "\n\nLabel '{}' doesn't exist in your Todoist. A new label is now created for you.\n".format(args.label))
+                # sys.exit(1)
+                api.labels.add(args.label)
+                api.commit()
+                api.sync()
+                labels = api.labels.all(lambda x: x['name'] == args.label)
+                label_id = labels[0]['id']
         else:
             # Label functionality not needed
             label_id = None
 
-        logging.info("\nAutodoist has connected and is running fine!\n")
+        logging.info("Autodoist has connected and is running fine!\n")
 
         return api, label_id
 
