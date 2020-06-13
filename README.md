@@ -19,7 +19,7 @@ If this tool helped you out, I would really appreciate your support by providing
 * Python 3.8
 * ```todoist-python``` package.
 
-# Automatic next action labels
+# 1. Automatic next action labels
 
 The program looks for pre-defined tags in the name of every project and parentless tasks in your Todoist account to automatically add and remove `@next_action` labels. 
 
@@ -65,13 +65,13 @@ Two methods are provided to hide tasks that are not relevant yet.
 - Prevent labels of all tasks if the due date is too far in the future. Define the amount by running with the argument '-hf <NUMBER_OF_DAYS>'.
 [See an example of the hide-future functionality](https://i.imgur.com/LzSoRUm.png).
 
-# Recurring lists
+# 2. Regenerate sub-tasks in recurring lists
 
 The program looks for all parentless tasks with a recurring date. If they contain sub-tasks, they will be regenerated in the same order when the parentless task is checked. Todoist Premium is not required for this functionality.
 
 ![See example](https://i.imgur.com/WKKd14o.gif)
 
-# Postpone the end-of-day
+# 3. Postpone the end-of-day
 
 You have a daily recurring task, but you're up working late and now it's past midnight. Todoist will automatically mark it overdue and when you check it, it moved to tomorrow. After a good nights rest you can't complete the task that day!
 
