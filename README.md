@@ -3,7 +3,8 @@
 This program adds three major functionalities to Todoist to help automate your workflow:
 
 1) Assign automatic next-action labels for a more GTD-like workflow
-   - Additional posibilities: label tasks based on a start-date or hide future tasks based on due date
+   - Flexible options to label tasks sequentialyl or in parallel
+   - Limit labels based on a start-date or hide future tasks based on the due date
 2) Enable regeneration of sub-tasks in lists with a recurring date
 3) Postpone the end-of-day time to after midnight to finish your daily recurring tasks
 
@@ -61,7 +62,7 @@ Two methods are provided to hide tasks that are not relevant yet.
 - Prevent labels by defining a start-date. The label is only assigned if this date is reached. A start date can be added to a task by adding 'start-date=DD-MM-YYYY'.
 [See an example of using start-dates](https://i.imgur.com/WJRoJzW.png).
 
-- Prevent labels when the due date is too far in the future. Simply define how many days, and the label is only assigned if the due date is less than that amount. The amount can be determined by the argument '-hf NUMBER_OF_DAYS'.
+- Prevent labels of all tasks if the due date is too far in the future. Define the amount by running with the argument '-hf <NUMBER_OF_DAYS>'.
 [See an example of the hide-future functionality](https://i.imgur.com/LzSoRUm.png).
 
 # Recurring lists
@@ -104,13 +105,17 @@ These modes can be run individually, or combined with each other.
 
 Several additional arguments can be provided, for example to change the suffix tags for parallel and sequential projects:
 
-    python autodoist.py --p_suffix <tag>
-    python autodoist.py --s_suffix <tag>
+    python autodoist.py --pp_suffix <tag>
+    python autodoist.py --ss_suffix <tag>
+    
+Or if you want to hide all tasks due in the future:
+
+    python autodoist.py --hf <NUMBER_OF_DAYS>
 
 In addition, if you experience issues with syncing you can increase the api syncing time (default 5 seconds):
     
     python autodoist.py --delay <time in seconds>
 
-For all arguments check the help:
+For all arguments, please check out the help:
 
     python autodoist.py --help
