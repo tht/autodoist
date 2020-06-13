@@ -3,7 +3,7 @@
 This program adds three major functionalities to Todoist to help automate your workflow:
 
 1) Assign automatic next-action labels for a more GTD-like workflow
-   - Flexible options to label tasks sequentialyl or in parallel
+   - Flexible options to label tasks sequentially or in parallel
    - Limit labels based on a start-date or hide future tasks based on the due date
 2) Enable regeneration of sub-tasks in lists with a recurring date
 3) Postpone the end-of-day time to after midnight to finish your daily recurring tasks
