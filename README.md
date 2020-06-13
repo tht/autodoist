@@ -55,7 +55,7 @@ Any parentless task can also be be given a type by appending `//` or `--` to the
 
 [See example 2 with a serial project](https://i.imgur.com/JfaAOzZ.gif)
 
-## Start/End date enhanced experience
+## Start/Due date enhanced experience
 
 Two methods are provided to hide tasks that are not relevant yet.
 
