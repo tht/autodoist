@@ -27,7 +27,7 @@ def make_wide(formatter, w=120, h=36):
 def main():
 
     # Version
-    current_version = 'v1.2'
+    current_version = 'v1.3'
 
     """Main process function."""
     parser = argparse.ArgumentParser(
@@ -51,9 +51,9 @@ def main():
     parser.add_argument(
         '-sp', '--sp_suffix', help='Change suffix for sequential-parallel labeling (default "-/").', default='-/')
     parser.add_argument(
-        '-hf', '--hide_future', help='Prevent labelling of future tasks beyond a specified number of days.', default = 0, type=int)
+        '-df', '--dateformat', help='Strptime() format of starting date (default "%%d-%%m-%%Y").', default = '%d-%m-%Y')
     parser.add_argument(
-        '-df', '--dateformat', help='Strptime() format of starting date (default "%d-%m-%Y").', default = "%d-%m-%Y", type=str)
+        '-hf', '--hide_future', help='Prevent labelling of future tasks beyond a specified number of days.', default = 0, type=int)
     parser.add_argument(
         '--onetime', help='Update Todoist once and exit.', action='store_true')
     parser.add_argument(
