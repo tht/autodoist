@@ -44,9 +44,13 @@ def main():
     parser.add_argument(
         '-d', '--delay', help='Specify the delay in seconds between syncs (default 5).', default=5, type=int)
     parser.add_argument(
-        '-ps', '--p_suffix', help='Change suffix for parallel labeling (default "//").', default='//')
+        '-pp', '--pp_suffix', help='Change suffix for parallel-parallel labeling (default "//").', default='//')
     parser.add_argument(
-        '-ss', '--s_suffix', help='Change suffix for sequential labeling (default "--").', default='--')
+        '-ss', '--ss_suffix', help='Change suffix for sequential-sequential labeling (default "--").', default='--')
+    parser.add_argument(
+        '-ps', '--ps_suffix', help='Change suffix for parallel-sequential labeling (default "/-").', default='/-')
+    parser.add_argument(
+        '-sp', '--sp_suffix', help='Change suffix for sequential-parallel labeling (default "-/").', default='-/')
     parser.add_argument('-hf', '--hide_future', help='Skip labelling future tasks after the specified number of days (default 7).',
                         default=7, type=int)
     parser.add_argument(
@@ -220,7 +224,7 @@ def main():
             return 1
 
     def get_type(object, key):
-        len_suffix = [len(args.p_suffix), len(args.s_suffix)]
+        len_suffix = [len(args.pp_suffix), len(args.ss_suffix), len(args.ps_suffix), len(args.sp_suffix)]
 
         try:
             old_type = object[key]
@@ -235,10 +239,14 @@ def main():
 
         if name == 'Inbox':
             current_type = args.inbox
-        elif name[-len_suffix[0]:] == args.p_suffix:
+        elif name[-len_suffix[0]:] == args.pp_suffix:
             current_type = 'parallel'
-        elif name[-len_suffix[1]:] == args.s_suffix:
+        elif name[-len_suffix[1]:] == args.ss_suffix:
             current_type = 'sequential'
+        elif name[-len_suffix[1]:] == args.ps_suffix:
+            current_type = 'p-s'
+        elif name[-len_suffix[1]:] == args.sp_suffix:
+            current_type = 's-p'
         else:
             current_type = None
 
@@ -490,17 +498,17 @@ def main():
 
                     # If it is a parentless task
                     if item['parent_id'] == 0:
-                        if project_type == 'sequential':
+                        if project_type == 'sequential' or project_type == 's-p':
                             if not first_found_project:
                                 add_label(item, label_id)
                                 first_found_project = True
-                            elif not first_found_item:
+                            elif not first_found_item and not project_type == 's-p':
                                 add_label(item, label_id)
                                 first_found_item = True
-                            # else:
-                            #     remove_label(item, label_id)
-                        elif project_type == 'parallel':
+
+                        elif project_type == 'parallel' or project_type == 'p-s':
                             add_label(item, label_id)
+
                         else:
                             # If no project-type has been defined
                             if item_type:
@@ -514,7 +522,7 @@ def main():
                                 for child_item in child_items]
 
                         # Process sequential tagged items (item_type can overrule project_type)
-                        if item_type == 'sequential':
+                        if item_type == 'sequential' or item_type == 'p-s':
                             for child_item in child_items:
                                 # Pass item_type down to the children
                                 child_item['parent_type'] = item_type
@@ -527,7 +535,7 @@ def main():
                                     remove_label(child_item, label_id)
 
                         # Process parallel tagged items or untagged parents
-                        elif item_type == 'parallel':
+                        elif item_type == 'parallel' or (item_type == 's-p' and label_id in item['labels']):
                             remove_label(item, label_id)
                             for child_item in child_items:
                                 child_item['parent_type'] = item_type
