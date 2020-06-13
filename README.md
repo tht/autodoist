@@ -25,7 +25,7 @@ The program looks for pre-defined tags in the name of every project and parentle
 
 Projects and parentless tasks can be tagged independently from each other to create the required functionality. If this tag is not defined, it will not activate this functionality. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
 
-See the example given at [running autodoist](#running-autodoist) on how to run this mode. Make sure that the label exists in your Todoist before running. Todoist Premium is required in order to use labels and to make this functionality possible.
+See the example given at [running autodoist](#running-autodoist) on how to run this mode. If the label does not exist yet in your Todoist, a possibility is given to automatiacally create it. Todoist Premium is required in order to use labels and to make this functionality possible.
 
 ## Sequential processing
 
