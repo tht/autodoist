@@ -2,7 +2,8 @@
 
 This program adds three major functionalities to Todoist to help automate your workflow:
 
-1) Assign automatic `@next_action` labels for a more GTD-like workflow
+1) Assign automatic next-action labels for a more GTD-like workflow
+   - Additional posibilities: label tasks based on a start-date or hide future tasks based on due date
 2) Enable regeneration of sub-tasks in lists with a recurring date
 3) Postpone the end-of-day time to after midnight to finish your daily recurring tasks
 
@@ -25,26 +26,43 @@ Projects and parentless tasks can be tagged independently from each other to cre
 
 See the example given at [running autodoist](#running-autodoist) on how to run this mode. Make sure that the label exists in your Todoist before running. Todoist Premium is required in order to use labels and to make this functionality possible.
 
-## Sequential list processing
+## Sequential processing
 
-If a project or parentless task ends with `--`, the sub-tasks will be treated as a priority queue and the most important will be labeled `@next_action`. Importance is determined by order in the list.
+If a project or parentless task ends with `--`, both the parentless tasks and its sub-tasks will be treated as a priority queue and the most important will be labeled. Importance is determined by order in the list.
 
 ![Serial task](https://i.imgur.com/SUkhPiE.gif)
 
-## Parallel list processing
+## Parallel processing
 
-If a project or parentless task name ends with `//`, the sub-tasks will be treated as parallel `@next_action`s.
-A waterfall processing is applied, where the lowest possible sub-tasks are labelled.
+If a project or parentless task name ends with `//`, both the parentless tasks and its sub-tasks will be treated as parallel. A waterfall processing is applied, where the lowest possible sub-tasks are labelled.
 
 ![Parallel task](https://i.imgur.com/NPTLQ8B.gif)
 
-## Parentless tasks
+## Added labelling flexibility
 
-Any parentless task can be be given a type by appending `//` or `--` to the name of the task. This works if there is no project type, and will override a previously defined project type.
+If a project ends with `-/`, all parentless tasks are processed sequentially, and its sub-tasks in parallel.
+
+[See example](https://i.imgur.com/uGJFeXB.gif)
+
+If a project ends with `/-`, all parentless tasks are processed in parallel, and its sub-tasks sequentially.
+
+[See example](https://i.imgur.com/5lZ1BVI.gif)
+
+Any parentless task can also be be given a type by appending `//` or `--` to the name of the task. This works if there is no project type, and will override a previously defined project type.
 
 [See example 1 with a parallel project](https://i.imgur.com/d9Qfq0v.gif)
 
 [See example 2 with a serial project](https://i.imgur.com/JfaAOzZ.gif)
+
+## Start/End date enhanced experience
+
+Two methods are provided to hide tasks that are not relevant yet.
+
+- Prevent labels by defining a start-date. The label is only assigned if this date is reached. A start date can be added to a task by adding 'start-date=DD-MM-YYYY'.
+[See an example of using start-dates](https://i.imgur.com/WJRoJzW.png).
+
+- Prevent labels when the due date is too far in the future. Simply define how many days, and the label is only assigned if the due date is less than that amount. The amount can be determined by the argument '-hf NUMBER_OF_DAYS'.
+[See an example of the hide-future functionality](https://i.imgur.com/LzSoRUm.png).
 
 # Recurring lists
 
