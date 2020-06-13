@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 from todoist.api import TodoistAPI
-from datetime import datetime
 import sys
 import time
 import requests
@@ -51,8 +50,10 @@ def main():
         '-ps', '--ps_suffix', help='Change suffix for parallel-sequential labeling (default "/-").', default='/-')
     parser.add_argument(
         '-sp', '--sp_suffix', help='Change suffix for sequential-parallel labeling (default "-/").', default='-/')
-    parser.add_argument('-hf', '--hide_future', help='Skip labelling future tasks after the specified number of days (default 7).',
-                        default=7, type=int)
+    parser.add_argument(
+        '-hf', '--hide_future', help='Prevent labelling of future tasks beyond a specified number of days.', default = 0, type=int)
+    parser.add_argument(
+        '-df', '--dateformat', help='Strptime() format of starting date (default "%d-%m-%Y").', default = "%d-%m-%Y", type=str)
     parser.add_argument(
         '--onetime', help='Update Todoist once and exit.', action='store_true')
     parser.add_argument(
@@ -61,6 +62,7 @@ def main():
                         action='store_true')
     parser.add_argument('--inbox', help='The method the Inbox should be processed with.',
                         default=None, choices=['parallel', 'sequential'])
+
     args = parser.parse_args()
 
     # Set debug
@@ -87,15 +89,15 @@ def main():
             quit()
 
     def query_yes_no(question, default="yes"):
-    # """Ask a yes/no question via raw_input() and return their answer.
+        # """Ask a yes/no question via raw_input() and return their answer.
 
-    # "question" is a string that is presented to the user.
-    # "default" is the presumed answer if the user just hits <Enter>.
-    #     It must be "yes" (the default), "no" or None (meaning
-    #     an answer is required of the user).
+        # "question" is a string that is presented to the user.
+        # "default" is the presumed answer if the user just hits <Enter>.
+        #     It must be "yes" (the default), "no" or None (meaning
+        #     an answer is required of the user).
 
-    # The "answer" return value is True for "yes" or False for "no".
-    # """
+        # The "answer" return value is True for "yes" or False for "no".
+        # """
         valid = {"yes": True, "y": True, "ye": True,
                 "no": False, "n": False}
         if default is None:
@@ -543,15 +545,37 @@ def main():
                                     # child_first_found = True
                                     add_label(child_item, label_id)
 
-                        # If item is too far in the future, remove the next_action tag and skip
-                        if args.hide_future > 0 and 'due_date_utc' in item.data and item['due_date_utc'] is not None:
-                            due_date = datetime.strptime(
-                                item['due_date_utc'], '%a %d %b %Y %H:%M:%S +0000')
-                            future_diff = (
-                                due_date - datetime.utcnow()).total_seconds()
-                            if future_diff >= (args.hide_future * 86400):
+                    # If item is too far in the future, remove the next_action tag and skip
+                    try:
+                        if args.hide_future > 0 and 'due' in item.data and item['due'] is not None:
+                            due_date = datetime.strptime(item['due']['date'], "%Y-%m-%d")
+                            future_diff = (due_date - datetime.today()).days
+                            if future_diff >= args.hide_future:
                                 remove_label(item, label_id)
                                 continue
+                    except:
+                        # Hide-future not set, skip
+                        continue
+                    
+                    # If start-date has not passed yet, remove label
+                    try:
+                        f = item['content'].find('start=')
+                        if f > -1:
+                            f_end = item['content'][f+6:].find(' ')
+                            if f_end > -1:
+                                start_date = item['content'][f+6:f+6+f_end]
+                            else:
+                                start_date = item['content'][f+6:]
+                            start_date = datetime.strptime(start_date , args.dateformat)
+                            future_diff = (datetime.today()-start_date).days
+                            if future_diff < 0:
+                                remove_label(item, label_id)
+                                continue
+
+                    except Exception as e:
+                        logging.exception(
+                            'Error start-date: %s' % str(e))
+                        continue
 
         # Commit the queue with changes
         if label_id is not None:
