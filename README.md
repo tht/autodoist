@@ -59,7 +59,7 @@ Any parentless task can also be be given a type by appending `//` or `--` to the
 
 Two methods are provided to hide tasks that are not relevant yet.
 
-- Prevent labels by defining a start-date. The label is only assigned if this date is reached. A start date can be added to a task by adding 'start-date=DD-MM-YYYY'.
+- Prevent labels by defining a start-date. The label is only assigned if this date is reached. A start date can be added to a task by adding 'start=DD-MM-YYYY'.
 [See an example of using start-dates](https://i.imgur.com/WJRoJzW.png).
 
 - Prevent labels of all tasks if the due date is too far in the future. Define the amount by running with the argument '-hf <NUMBER_OF_DAYS>'.
