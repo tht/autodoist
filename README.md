@@ -21,11 +21,11 @@ If this tool helped you out, I would really appreciate your support by providing
 
 # 1. Automatic next action labels
 
-The program looks for pre-defined tags in the name of every project and parentless tasks in your Todoist account to automatically add and remove `@next_action` labels. 
+The program looks for pre-defined tags in the name of every project and parentless tasks in your Todoist account to automatically add and remove `@next_action` labels. To create a simple list of all your next actions you can add a new filter in your Todoist with e.g.: @next_action & #project_name.
 
 Projects and parentless tasks can be tagged independently from each other to create the required functionality. If this tag is not defined, it will not activate this functionality. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
 
-See the example given at [running autodoist](#running-autodoist) on how to run this mode. If the label does not exist yet in your Todoist, a possibility is given to automatiacally create it. Todoist Premium is required in order to use labels and to make this functionality possible.
+See the example given at [running autodoist](#running-autodoist) on how to run this mode. If the label does not exist yet in your Todoist, a possibility is given to automatically create it. Todoist Premium is required in order to use labels and to make this functionality possible.
 
 ## Sequential processing
 
