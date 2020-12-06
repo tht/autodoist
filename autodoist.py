@@ -225,19 +225,8 @@ def main():
             logging.error("Error while checking for updates: {}".format(e))
             return 1
 
-    def get_type(object, key):
+    def check_name(name):
         len_suffix = [len(args.pp_suffix), len(args.ss_suffix), len(args.ps_suffix), len(args.sp_suffix)]
-
-        try:
-            old_type = object[key]
-        except Exception as e:
-            # logging.debug('No defined project_type: %s' % str(e))
-            old_type = None
-
-        try:
-            name = object['name'].strip()
-        except:
-            name = object['content'].strip()
 
         if name == 'Inbox':
             current_type = args.inbox
@@ -251,6 +240,33 @@ def main():
             current_type = 's-p'
         else:
             current_type = None
+
+        return current_type
+
+    def get_type(object, key):
+
+        #TODO: API variable needs to be parsed to this function in order to make this work.
+
+        try:
+            old_type = object[key]
+        except Exception as e:
+            # logging.debug('No defined project_type: %s' % str(e))
+            old_type = None
+
+        try:
+            object_name = object['name'].strip()
+        except:
+            object_name = object['content'].strip()
+        
+        current_type = check_name(object_name)
+
+        # If no type is found in parent tast, try to find one in the section name
+        if current_type is None:
+            try:
+                section_name = api.sections.all(lambda x: x['id'] == object['section_id'])
+                current_type = check_name(section_name)
+            except Exception as e:
+                current_type = None
 
         # Check if project type changed with respect to previous run
         if old_type == current_type:
