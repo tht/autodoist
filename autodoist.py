@@ -249,7 +249,7 @@ def main():
 
         try:
             old_type = object[key]
-        except Exception as e:
+        except:
             # logging.debug('No defined project_type: %s' % str(e))
             old_type = None
 
@@ -259,14 +259,6 @@ def main():
             object_name = object['content'].strip()
         
         current_type = check_name(object_name)
-
-        # If no type is found in parent tast, try to find one in the section name
-        if current_type is None:
-            try:
-                section_name = api.sections.all(lambda x: x['id'] == object['section_id'])
-                current_type = check_name(section_name)
-            except Exception as e:
-                current_type = None
 
         # Check if project type changed with respect to previous run
         if old_type == current_type:
@@ -284,7 +276,28 @@ def main():
 
         return project_type, project_type_changed
 
-    def get_item_type(item, project_type):
+    def get_section_type(item_object, api):
+        """Identifies how a section should be handled."""
+
+        if api is not None:
+            section = api.sections.all(lambda x: x['id'] == item_object['section_id'])
+            current_type = get_type(section[0], 'section_type')
+        else:
+            section_type = None
+            section_type_changed = 0
+
+        if current_type is not None:
+            print(section[0]['name'])
+            print(current_type)
+
+        try:
+            first_section_change = section['first_change']
+        except:
+            section['first_change'] = 0
+
+        return section_type, section_type_changed
+
+    def get_item_type(item, project_type, api):
         """Identifies how a item with sub items should be handled."""
 
         if project_type is None and item['parent_id'] != 0:
@@ -297,7 +310,14 @@ def main():
         else:
             item_type, item_type_changed = get_type(item, 'item_type')
 
-        return item_type, item_type_changed
+        # If no type is found in parentless task name, try to find one in the section name.
+        if item_type is None:
+            section_type, section_type_changed = get_section_type(item, api) #################### TODO: How to note first change for sequential?
+        else:
+            section_type = None
+            section_type_changed = 0
+        
+        return item_type, item_type_changed, section_type, section_type_changed
 
     def add_label(item, label):
         if label not in item['labels']:
@@ -376,6 +396,7 @@ def main():
 
                 # To determine if a sequential task was found
                 first_found_project = False
+                first_found_section = False
                 first_found_item = True
 
             # For all items in this project
@@ -396,7 +417,7 @@ def main():
                         if item['r_tag'] == 1:
                             item['r_tag'] = 0
                             api.items.update(item['id'])
-                    except Exception as e:
+                    except:
                         pass
 
                 # If options turned on, start recurring lists logic
@@ -459,14 +480,14 @@ def main():
                                             for child_item in child_items_all:
                                                 child_item['r_tag'] = 1
 
-                                except Exception as e:
+                                except:
                                     # If date has never been saved before, create a new entry
                                     logging.debug(
                                         'New recurring task detected: %s' % item['content'])
                                     item['date_old'] = item['due']['date']
                                     api.items.update(item['id'])
 
-                        except Exception as e:
+                        except:
                             logging.debug(
                                 'Parent not recurring: %s' % item['content'])
                             pass
@@ -481,7 +502,7 @@ def main():
 
                                 for child_item in child_items_all:
                                     child_item['r_tag'] = 1
-                        except Exception as e:
+                        except:
                             logging.debug('Child not recurring: %s' %
                                           item['content'])
                             pass
@@ -493,8 +514,11 @@ def main():
                         continue
 
                     # Check item type
-                    item_type, item_type_changed = get_item_type(
-                        item, project_type)
+
+                    
+
+                    item_type, item_type_changed, section_type, section_type_changed = get_item_type(
+                        item, project_type, api)
                     logging.debug('Identified \'%s\' as %s type',
                                   item['content'], item_type)
 
