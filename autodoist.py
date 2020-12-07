@@ -281,19 +281,24 @@ def main():
 
         if api is not None:
             section = api.sections.all(lambda x: x['id'] == item_object['section_id'])
-            current_type = get_type(section[0], 'section_type')
+            if section:
+                section_type, section_type_changed = get_type(section[0], 'section_type')
+
+                # Hier of later inbouwen?
+                # try:
+                #     first_change = section['first_change']
+                # except:
+                #     section['first_change'] = 0
+            else:
+                section_type = None
+                section_type_changed = 0
+
+            if section_type is not None:
+                print(section[0]['name'])
+                print(section_type)
         else:
             section_type = None
             section_type_changed = 0
-
-        if current_type is not None:
-            print(section[0]['name'])
-            print(current_type)
-
-        try:
-            first_section_change = section['first_change']
-        except:
-            section['first_change'] = 0
 
         return section_type, section_type_changed
 
@@ -312,7 +317,7 @@ def main():
 
         # If no type is found in parentless task name, try to find one in the section name.
         if item_type is None:
-            section_type, section_type_changed = get_section_type(item, api) #################### TODO: How to note first change for sequential?
+            section_type, section_type_changed = get_section_type(item, api)
         else:
             section_type = None
             section_type_changed = 0
@@ -514,18 +519,18 @@ def main():
                         continue
 
                     # Check item type
-
-                    
-
                     item_type, item_type_changed, section_type, section_type_changed = get_item_type(
                         item, project_type, api)
                     logging.debug('Identified \'%s\' as %s type',
                                   item['content'], item_type)
 
-                    # Check the item_type of the project or parent
+                    # If there is no item of section type
                     if item_type is None:
+                        # Handle parentless tasks
                         if item['parent_id'] == 0:
                             item_type = project_type
+
+                        # Handle other tasks
                         else:
                             try:
                                 if item['parent_type'] is None:
@@ -563,6 +568,8 @@ def main():
                             [remove_label(child_item, label_id)
                                 for child_item in child_items]
 
+                        #TODO: How to add if SECTION is sequential?
+                        
                         # Process sequential tagged items (item_type can overrule project_type)
                         if item_type == 'sequential' or item_type == 'p-s':
                             for child_item in child_items:
