@@ -245,8 +245,6 @@ def main():
 
     def get_type(object, key):
 
-        #TODO: API variable needs to be parsed to this function in order to make this work.
-
         try:
             old_type = object[key]
         except:
@@ -303,7 +301,7 @@ def main():
         return section_type, section_type_changed
 
     def get_item_type(item, project_type, api):
-        """Identifies how a item with sub items should be handled."""
+        """Identifies how an item with sub items should be handled."""
 
         if project_type is None and item['parent_id'] != 0:
             try:
@@ -378,6 +376,8 @@ def main():
             # Get all items for the project
             items = api.items.all(
                 lambda x: x['project_id'] == project['id'])
+            
+            sections = [x['section_id'] for x in items] # better than api.sections.all(lambda x: x['project_id'] == project['id']), since then NoneTypes are not shown
 
             # Change top parents_id in order to sort later on
             for item in items:
@@ -555,11 +555,12 @@ def main():
 
                         elif project_type == 'parallel' or project_type == 'p-s':
                             add_label(item, label_id)
-
-                        else:
-                            # If no project-type has been defined
-                            if item_type:
-                                add_label(item, label_id)
+                            
+                        if section_type:
+                            add_label(item, label_id)     
+                        
+                        if item_type:
+                            add_label(item, label_id)
 
                     # If there are children
                     if len(child_items) > 0:
