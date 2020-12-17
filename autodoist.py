@@ -128,7 +128,7 @@ def main():
                 "\n\nNo API key set. Run Autodoist with '-a <YOUR_API_KEY>'\n")
             sys.exit(1)
 
-        # Check if AEOD is used
+        # Check if alternative end of day is used
         if args.end is not None:
             if args.end < 1 or args.end > 24:
                 logging.error(
@@ -372,259 +372,271 @@ def main():
                 project_type, project_type_changed = get_project_type(project)
                 logging.debug('Project \'%s\' being processed as %s',
                               project['name'], project_type)
-
+                
             # Get all items for the project
-            items = api.items.all(
-                lambda x: x['project_id'] == project['id'])
+            # items = api.items.all(
+            #     lambda x: x['project_id'] == project['id'])
             
-            sections = [x['section_id'] for x in items] # better than api.sections.all(lambda x: x['project_id'] == project['id']), since then NoneTypes are not shown
-
-            # Change top parents_id in order to sort later on
-            for item in items:
-                if not item['parent_id']:
-                    item['parent_id'] = 0
-
-            # Sort by parent_id and filter for completable items
-            items = sorted(items, key=lambda x: (
-                x['parent_id'], x['child_order']))
-            items = list(
-                filter(lambda x: not x['content'].startswith('*'), items))
-
-            if label_id is not None:
-                # If project type has been changed, clean everything for good measure
-                if project_type_changed == 1:
-                    # Remove labels
-                    [remove_label(item, label_id) for item in items]
-                    # Remove parent types
-                    for item in items:
-                        item['parent_type'] = None
-
-                # To determine if a sequential task was found
-                first_found_project = False
-                first_found_section = False
-                first_found_item = True
-
-            # For all items in this project
-            for item in items:
-
-                # Determine which child_items exist, both all and the ones that have not been checked yet
-                non_checked_items = list(
-                    filter(lambda x: x['checked'] == 0, items))
-                child_items_all = list(
-                    filter(lambda x: x['parent_id'] == item['id'], items))
-                child_items = list(
-                    filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
-
-                # Logic for recurring lists
-                if not args.recurring:
-                    try:
-                        # If old label is present, reset it
-                        if item['r_tag'] == 1:
-                            item['r_tag'] = 0
-                            api.items.update(item['id'])
-                    except:
-                        pass
-
-                # If options turned on, start recurring lists logic
-                if args.recurring or args.end:
-                    if item['parent_id'] == 0:
+            sections = api.sections.all(lambda x: x['project_id'] == project['id'])
+            section_ids = [x['id'] for x in sections]
+            section_ids.insert(0,None)
+            
+            add_empty_section(sections) # Build class
+            
+            for section in sections:
+                
+                # Get all items for the section
+                items = api.items.all(lambda x: x['section_id'] == section['id'])
+                # sections = [x['section_id'] for x in items] # better than api.sections.all(lambda x: x['project_id'] == project['id']), since then NoneTypes are not shown
+    
+                # Change top parents_id in order to sort later on
+                for item in items:
+                    if not item['parent_id']:
+                        item['parent_id'] = 0
+    
+                # Sort by parent_id and filter for completable items
+                items = sorted(items, key=lambda x: (
+                    x['parent_id'], x['child_order']))
+                items = list(
+                    filter(lambda x: not x['content'].startswith('*'), items))
+    
+                if label_id is not None:
+                    # If project type has been changed, clean everything for good measure
+                    if project_type_changed == 1:
+                        # Remove labels
+                        [remove_label(item, label_id) for item in items]
+                        # Remove parent types
+                        for item in items:
+                            item['parent_type'] = None
+    
+                    # To determine if a sequential task was found
+                    first_found_project = False
+                    first_found_section = False
+                    first_found_item = True
+    
+                # For all items in this project
+                for item in items:
+    
+                    # Determine which child_items exist, both all and the ones that have not been checked yet
+                    non_checked_items = list(
+                        filter(lambda x: x['checked'] == 0, items))
+                    child_items_all = list(
+                        filter(lambda x: x['parent_id'] == item['id'], items))
+                    child_items = list(
+                        filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
+    
+                    # Logic for recurring lists
+                    if not args.recurring:
                         try:
-                            if item['due']['is_recurring']:
-                                try:
-                                    # Check if the T0 task date has changed
-                                    if item['due']['date'] != item['date_old']:
-
-                                        if args.end is not None:
-                                            # Determine current hour
-                                            t = datetime.today()
-                                            current_hour = t.hour
-
-                                            # Check if current time is before our end-of-day
-                                            if (args.end - current_hour) > 0:
-
-                                                # Determine the difference in days set by todoist
-                                                nd = [
-                                                    int(x) for x in item['due']['date'].split('-')]
-                                                od = [
-                                                    int(x) for x in item['date_old'].split('-')]
-
-                                                new_date = datetime(
-                                                    nd[0], nd[1], nd[2])
-                                                old_date = datetime(
-                                                    od[0], od[1], od[2])
-                                                today = datetime(
-                                                    t.year, t.month, t.day)
-                                                days_difference = (
-                                                    new_date-today).days
-                                                days_overdue = (
-                                                    today - old_date).days
-
-                                                # Only apply if overdue and if it's a daily recurring tasks
-                                                if days_overdue >= 1 and days_difference == 1:
-
-                                                    # Find curreny date in string format
-                                                    today_str = [str(x) for x in [
-                                                        today.year, today.month, today.day]]
-                                                    if len(today_str[1]) == 1:
-                                                        today_str[1] = ''.join(
-                                                            ['0', today_str[1]])
-
-                                                    # Update due-date to today
-                                                    item_due = item['due']
-                                                    item_due['date'] = '-'.join(
-                                                        today_str)
-                                                    item.update(due=item_due)
-                                                    # item.update(due={'date': '2020-05-29', 'is_recurring': True, 'string': 'every day'})
-
-                                        # Save the new date for reference us
-                                        item.update(
-                                            date_old=item['due']['date'])
-
-                                        # Mark children for action
-                                        if args.recurring is True:
-                                            for child_item in child_items_all:
-                                                child_item['r_tag'] = 1
-
-                                except:
-                                    # If date has never been saved before, create a new entry
-                                    logging.debug(
-                                        'New recurring task detected: %s' % item['content'])
-                                    item['date_old'] = item['due']['date']
-                                    api.items.update(item['id'])
-
-                        except:
-                            logging.debug(
-                                'Parent not recurring: %s' % item['content'])
-                            pass
-
-                    if args.recurring is True and item['parent_id'] != 0:
-                        try:
+                            # If old label is present, reset it
                             if item['r_tag'] == 1:
-                                item.update(checked=0)
-                                item.update(in_history=0)
                                 item['r_tag'] = 0
                                 api.items.update(item['id'])
-
-                                for child_item in child_items_all:
-                                    child_item['r_tag'] = 1
                         except:
-                            logging.debug('Child not recurring: %s' %
-                                          item['content'])
                             pass
-
-                # If options turned on, start labelling logic
-                if label_id is not None:
-                    # Skip processing an item if it has already been checked
-                    if item['checked'] == 1:
-                        continue
-
-                    # Check item type
-                    item_type, item_type_changed, section_type, section_type_changed = get_item_type(
-                        item, project_type, api)
-                    logging.debug('Identified \'%s\' as %s type',
-                                  item['content'], item_type)
-
-                    # If there is no item of section type
-                    if item_type is None:
-                        # Handle parentless tasks
+    
+                    # If options turned on, start recurring lists logic
+                    if args.recurring or args.end:
                         if item['parent_id'] == 0:
-                            item_type = project_type
-
-                        # Handle other tasks
-                        else:
                             try:
-                                if item['parent_type'] is None:
-                                    item_type = project_type
-                                else:
-                                    item_type = item['parent_type']
+                                if item['due']['is_recurring']:
+                                    try:
+                                        # Check if the T0 task date has changed
+                                        if item['due']['date'] != item['date_old']:
+                                            
+                                            # Save the new date for reference us
+                                            item.update(
+                                                date_old=item['due']['date'])
+                                            
+                                            # Mark children for action
+                                            if args.recurring:
+                                                for child_item in child_items_all:
+                                                    child_item['r_tag'] = 1
+                                            
+                                            # If alternative end of day, fix due date if needed
+                                            if args.end is not None:
+                                                # Determine current hour
+                                                t = datetime.today()
+                                                current_hour = t.hour
+    
+                                                # Check if current time is before our end-of-day
+                                                if (args.end - current_hour) > 0:
+    
+                                                    # Determine the difference in days set by todoist
+                                                    nd = [
+                                                        int(x) for x in item['due']['date'].split('-')]
+                                                    od = [
+                                                        int(x) for x in item['date_old'].split('-')]
+    
+                                                    new_date = datetime(
+                                                        nd[0], nd[1], nd[2])
+                                                    old_date = datetime(
+                                                        od[0], od[1], od[2])
+                                                    today = datetime(
+                                                        t.year, t.month, t.day)
+                                                    days_difference = (
+                                                        new_date-today).days
+                                                    days_overdue = (
+                                                        today - old_date).days
+    
+                                                    # Only apply if overdue and if it's a daily recurring tasks
+                                                    if days_overdue >= 1 and days_difference == 1:
+    
+                                                        # Find curreny date in string format
+                                                        today_str = [str(x) for x in [
+                                                            today.year, today.month, today.day]]
+                                                        if len(today_str[1]) == 1:
+                                                            today_str[1] = ''.join(
+                                                                ['0', today_str[1]])
+    
+                                                        # Update due-date to today
+                                                        item_due = item['due']
+                                                        item_due['date'] = '-'.join(
+                                                            today_str)
+                                                        item.update(due=item_due)
+                                                        # item.update(due={'date': '2020-05-29', 'is_recurring': True, 'string': 'every day'})
+    
+                                    except:
+                                        # If date has never been saved before, create a new entry
+                                        logging.debug(
+                                            'New recurring task detected: %s' % item['content'])
+                                        item['date_old'] = item['due']['date']
+                                        api.items.update(item['id'])
+    
                             except:
+                                logging.debug(
+                                    'Parent not recurring: %s' % item['content'])
+                                pass
+    
+                        if args.recurring is True and item['parent_id'] != 0:
+                            try:
+                                if item['r_tag'] == 1:
+                                    item.update(checked=0)
+                                    item.update(in_history=0)
+                                    item['r_tag'] = 0
+                                    api.items.update(item['id'])
+    
+                                    for child_item in child_items_all:
+                                        child_item['r_tag'] = 1
+                            except:
+                                logging.debug('Child not recurring: %s' %
+                                              item['content'])
+                                pass
+    
+                    # If options turned on, start labelling logic
+                    if label_id is not None:
+                        # Skip processing an item if it has already been checked
+                        if item['checked'] == 1:
+                            #TODO: remove label if it has it?
+                            continue
+    
+                        # Check item type
+                        item_type, item_type_changed, section_type, section_type_changed = get_item_type(
+                            item, project_type, api)
+                        logging.debug('Identified \'%s\' as %s type',
+                                      item['content'], item_type)
+    
+                        # If there is no item //TODO: or section type
+                        if item_type is None:
+                            # Handle parentless tasks
+                            if item['parent_id'] == 0:
                                 item_type = project_type
-                    else:
-                        # Reset in case that parentless task is tagged, overrules project
-                        first_found_item = False
-
-                    # If it is a parentless task
-                    if item['parent_id'] == 0:
-                        if project_type == 'sequential' or project_type == 's-p':
-                            if not first_found_project:
-                                add_label(item, label_id)
-                                first_found_project = True
-                            elif not first_found_item and not project_type == 's-p':
-                                add_label(item, label_id)
-                                first_found_item = True
-
-                        elif project_type == 'parallel' or project_type == 'p-s':
-                            add_label(item, label_id)
-                            
-                        if section_type:
-                            add_label(item, label_id)     
-                        
-                        if item_type:
-                            add_label(item, label_id)
-
-                    # If there are children
-                    if len(child_items) > 0:
-                        # Check if item state has changed, if so clean children for good measure
-                        if item_type_changed == 1:
-                            [remove_label(child_item, label_id)
-                                for child_item in child_items]
-
-                        #TODO: How to add if SECTION is sequential?
-                        
-                        # Process sequential tagged items (item_type can overrule project_type)
-                        if item_type == 'sequential' or item_type == 'p-s':
-                            for child_item in child_items:
-                                # Pass item_type down to the children
-                                child_item['parent_type'] = item_type
-                                # Pass label down to the first child
-                                if child_item['checked'] == 0 and label_id in item['labels']:
-                                    add_label(child_item, label_id)
-                                    remove_label(item, label_id)
-                                else:
-                                    # Clean for good measure
-                                    remove_label(child_item, label_id)
-
-                        # Process parallel tagged items or untagged parents
-                        elif item_type == 'parallel' or (item_type == 's-p' and label_id in item['labels']):
-                            remove_label(item, label_id)
-                            for child_item in child_items:
-                                child_item['parent_type'] = item_type
-                                if child_item['checked'] == 0:
-                                    # child_first_found = True
-                                    add_label(child_item, label_id)
-
-                    # If item is too far in the future, remove the next_action tag and skip
-                    try:
-                        if args.hide_future > 0 and 'due' in item.data and item['due'] is not None:
-                            due_date = datetime.strptime(item['due']['date'], "%Y-%m-%d")
-                            future_diff = (due_date - datetime.today()).days
-                            if future_diff >= args.hide_future:
-                                remove_label(item, label_id)
-                                continue
-                    except:
-                        # Hide-future not set, skip
-                        continue
-                    
-                    # If start-date has not passed yet, remove label
-                    try:
-                        f = item['content'].find('start=')
-                        if f > -1:
-                            f_end = item['content'][f+6:].find(' ')
-                            if f_end > -1:
-                                start_date = item['content'][f+6:f+6+f_end]
+    
+                            # Handle other tasks
                             else:
-                                start_date = item['content'][f+6:]
-                            start_date = datetime.strptime(start_date , args.dateformat)
-                            future_diff = (datetime.today()-start_date).days
-                            if future_diff < 0:
+                                try:
+                                    if item['parent_type'] is None:
+                                        item_type = project_type
+                                    else:
+                                        item_type = item['parent_type']
+                                except:
+                                    item_type = project_type
+                        else:
+                            # Reset in case that parentless task is tagged, overrules project
+                            first_found_item = False
+    
+                        # If it is a parentless task
+                        if item['parent_id'] == 0:
+                            if project_type == 'sequential' or project_type == 's-p':
+                                if not first_found_project:
+                                    add_label(item, label_id)
+                                    first_found_project = True
+                                elif not first_found_item and not project_type == 's-p':
+                                    add_label(item, label_id)
+                                    first_found_item = True
+    
+                            elif project_type == 'parallel' or project_type == 'p-s':
+                                add_label(item, label_id)
+                                
+                            if section_type:
+                                add_label(item, label_id)     
+                            
+                            if item_type:
+                                add_label(item, label_id)
+    
+                        # If there are children
+                        if len(child_items) > 0:
+                            # Check if item state has changed, if so clean children for good measure
+                            if item_type_changed == 1:
+                                [remove_label(child_item, label_id)
+                                    for child_item in child_items]
+    
+                            #TODO: How to add if SECTION is sequential?
+                            
+                            # Process sequential tagged items (item_type can overrule project_type)
+                            if item_type == 'sequential' or item_type == 'p-s':
+                                for child_item in child_items:
+                                    # Pass item_type down to the children
+                                    child_item['parent_type'] = item_type
+                                    # Pass label down to the first child
+                                    if child_item['checked'] == 0 and label_id in item['labels']:
+                                        add_label(child_item, label_id)
+                                        remove_label(item, label_id)
+                                    else:
+                                        # Clean for good measure
+                                        remove_label(child_item, label_id)
+    
+                            # Process parallel tagged items or untagged parents
+                            elif item_type == 'parallel' or (item_type == 's-p' and label_id in item['labels']):
                                 remove_label(item, label_id)
-                                continue
-
-                    except Exception as e:
-                        logging.exception(
-                            'Error start-date: %s' % str(e))
-                        continue
-
+                                for child_item in child_items:
+                                    child_item['parent_type'] = item_type
+                                    if child_item['checked'] == 0:
+                                        # child_first_found = True
+                                        add_label(child_item, label_id)
+    
+                        # If item is too far in the future, remove the next_action tag and skip
+                        try:
+                            if args.hide_future > 0 and 'due' in item.data and item['due'] is not None:
+                                due_date = datetime.strptime(item['due']['date'], "%Y-%m-%d")
+                                future_diff = (due_date - datetime.today()).days
+                                if future_diff >= args.hide_future:
+                                    remove_label(item, label_id)
+                                    continue
+                        except:
+                            # Hide-future not set, skip
+                            continue
+                        
+                        # If start-date has not passed yet, remove label
+                        try:
+                            f = item['content'].find('start=')
+                            if f > -1:
+                                f_end = item['content'][f+6:].find(' ')
+                                if f_end > -1:
+                                    start_date = item['content'][f+6:f+6+f_end]
+                                else:
+                                    start_date = item['content'][f+6:]
+                                start_date = datetime.strptime(start_date , args.dateformat)
+                                future_diff = (datetime.today()-start_date).days
+                                if future_diff < 0:
+                                    remove_label(item, label_id)
+                                    continue
+    
+                        except Exception as e:
+                            logging.exception(
+                                'Error start-date: %s' % str(e))
+                            continue
+    
         # Commit the queue with changes
         if label_id is not None:
             update_labels(label_id)
