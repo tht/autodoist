@@ -7,10 +7,11 @@ import requests
 import argparse
 import logging
 from datetime import datetime
+import time
 global overview_item_ids
 global overview_item_labels
 
-
+# Makes --help text wider
 def make_wide(formatter, w=120, h=36):
     """Return a wider HelpFormatter, if possible."""
     try:
@@ -22,7 +23,6 @@ def make_wide(formatter, w=120, h=36):
     except TypeError:
         logging.error("Argparse help formatter failed, falling back.")
         return formatter
-
 
 def main():
 
@@ -78,7 +78,7 @@ def main():
                             'debug.log', 'w+', 'utf-8'),
                             logging.StreamHandler()]
                         )
-
+    # Sync with Todoist API
     def sync(api):
         try:
             logging.debug('Syncing the current state from the API')
@@ -88,6 +88,7 @@ def main():
                 'Error trying to sync with Todoist API: %s' % str(e))
             quit()
 
+    # Simple query for yes/no answer 
     def query_yes_no(question, default="yes"):
         # """Ask a yes/no question via raw_input() and return their answer.
 
@@ -120,6 +121,7 @@ def main():
                 sys.stdout.write("Please respond with 'yes' or 'no' "
                                 "(or 'y' or 'n').\n")
 
+    # Initialisation of Autodoist
     def initialise(args):
 
         # Check we have a API key
@@ -198,6 +200,7 @@ def main():
 
         return api, label_id
 
+    # Check for Autodoist update
     def check_for_update(current_version):
         updateurl = 'https://api.github.com/repos/Hoffelhas/autodoist/releases'
 
@@ -207,7 +210,7 @@ def main():
             release_info_json = r.json()
 
             if not current_version == release_info_json[0]['tag_name']:
-                logging.warning("\n\nYour version is not up-to-date! \nYour version: {}. Latest version: {}\nSee latest version at: {}\n".format(
+                logging.warning("\n\nYour version is not up-to-date! \nYour version: {}. Latest version: {}\nFind the latest version at: {}\n".format(
                     current_version, release_info_json[0]['tag_name'], release_info_json[0]['html_url']))
                 return 1
             else:
@@ -224,12 +227,15 @@ def main():
             logging.error("Error while checking for updates: {}".format(e))
             return 1
 
+    # Assign current type based on settings
     def check_name(name):
         len_suffix = [len(args.pp_suffix), len(args.ss_suffix), len(args.ps_suffix), len(args.sp_suffix)]
 
         if name == 'Inbox':
             current_type = args.inbox
         elif name[-len_suffix[0]:] == args.pp_suffix:
+            current_type = 'parallel'
+        elif args.pp_suffix == '//' and name[-1:] == '_': # Workaround for section names, which don't allow / symbol.
             current_type = 'parallel'
         elif name[-len_suffix[1]:] == args.ss_suffix:
             current_type = 'sequential'
@@ -242,6 +248,7 @@ def main():
 
         return current_type
 
+    # Scan the end of a name to find what type it is
     def get_type(object, key):
 
         try:
@@ -266,6 +273,7 @@ def main():
 
         return current_type, type_changed
 
+    # Determine a project type
     def get_project_type(project_object):
         """Identifies how a project should be handled."""
         project_type, project_type_changed = get_type(
@@ -273,6 +281,7 @@ def main():
 
         return project_type, project_type_changed
 
+    # Determine a section type
     def get_section_type(section_object):
         """Identifies how a section should be handled."""
         if section_object is not None:
@@ -284,6 +293,7 @@ def main():
 
         return section_type, section_type_changed
 
+    # Determine an item type
     def get_item_type(item, project_type):
         """Identifies how an item with sub items should be handled."""
 
@@ -299,6 +309,7 @@ def main():
         
         return item_type, item_type_changed
 
+    # Logic to add a label to an item
     def add_label(item, label):
         if label not in item['labels']:
             labels = item['labels']
@@ -311,6 +322,7 @@ def main():
                 overview_item_ids[str(item['id'])] = 1
             overview_item_labels[str(item['id'])] = labels
 
+    # Logic to remove a label from an item
     def remove_label(item, label):
         if label in item['labels']:
             labels = item['labels']
@@ -323,6 +335,7 @@ def main():
                 overview_item_ids[str(item['id'])] = -1
             overview_item_labels[str(item['id'])] = labels
 
+    # Ensure labels are only issued once
     def update_labels(label_id):
         filtered_overview_ids = [
             k for k, v in overview_item_ids.items() if v != 0]
@@ -330,7 +343,8 @@ def main():
             labels = overview_item_labels[item_id]
             api.items.update(item_id, labels=labels)
 
-    def create_none_section(): # TODO: actually only needs to be created once?
+    # To handle items which have no sections
+    def create_none_section():
         none_sec = {
             'id': None,
             'name': 'None',
@@ -344,16 +358,17 @@ def main():
     # Initialise api
     api, label_id = initialise(args)
 
-    # Main loop
+    # Start main loop
     while True:
+        start_time = time.time()
         overview_item_ids = {}
         overview_item_labels = {}
         sync(api)
 
         for project in api.projects.all():
 
-            if project['name'] == 'Test //':
-                print('here')
+            # To determine if a sequential task was found
+            first_found_project = False
 
             if label_id is not None:
                 # Get project type
@@ -362,15 +377,6 @@ def main():
                               project['name'], project_type)
                 
             # Get all items for the project
-            # items = api.items.all(
-            #     lambda x: x['project_id'] == project['id'])
-            
-            
-            # section_ids = [x['id'] for x in sections]
-            # section_ids.insert(0,None)
-
-            # sections.append(create_none_section()) # Add a None-section to handle items in a project that have no section, append is faster than insert(0,ind)
-            
             project_items = api.items.all(lambda x: x['project_id'] == project['id'])
 
             # Run for both none-sectioned and sectioned items
@@ -381,6 +387,9 @@ def main():
                     sections = api.sections.all(lambda x: x['project_id'] == project['id'])
 
                 for section in sections:
+
+                    # To determine if a sequential task was found
+                    first_found_section = False
                     
                     # Get section type
                     section_type, section_type_changed = get_section_type(
@@ -413,12 +422,7 @@ def main():
                             # Remove parent types
                             for item in items:
                                 item['parent_type'] = None
-        
-                        # To determine if a sequential task was found
-                        first_found_project = False
-                        first_found_section = False
-                        first_found_item = True
-        
+                
                     # For all items in this section
                     for item in items:
                         active_type = None # Reset
@@ -533,7 +537,6 @@ def main():
                         if label_id is not None:
                             # Skip processing an item if it has already been checked
                             if item['checked'] == 1:
-                                #TODO: remove label if it has it?
                                 continue
         
                             # Check item type
@@ -541,13 +544,6 @@ def main():
                                 item, project_type)
                             logging.debug('Identified \'%s\' as %s type',
                                         item['content'], item_type)
-
-                            
-
-                            # If there is no item 
-                            if item_type is not None:
-                                # Reset in case that parentless task is tagged, overrules project
-                                first_found_item = False
 
                             # Determine hierarchy types for logic
                             hierarchy_types = [item_type, section_type, project_type]
@@ -559,7 +555,6 @@ def main():
                                     # Do item types
                                     active_type = item_type
                                     add_label(item, label_id)
-                                    
 
                                 elif active_types[1]:
                                     # Do section types
@@ -580,12 +575,15 @@ def main():
                                         if not first_found_project:
                                             add_label(item, label_id)
                                             first_found_project = True
-                                        # elif not first_found_item and not project_type == 's-p':
-                                        #     add_label(item, label_id)
-                                        #     first_found_item = True
             
                                     elif project_type == 'parallel' or project_type == 'p-s':
                                         add_label(item, label_id)
+                                
+                                # Mark other conditions too
+                                if first_found_section == False and active_types[1]:
+                                    first_found_section = True
+                                if first_found_project is False and active_types[2]:
+                                    first_found_project = True
                         
                             # If there are children
                             if len(child_items) > 0:
@@ -667,10 +665,16 @@ def main():
         # If onetime is set, exit after first execution.
         if args.onetime:
             break
+        
+        end_time = time.time()
+        delta_time = end_time - start_time
 
-        logging.debug('Sleeping for %d seconds', args.delay)
-        time.sleep(args.delay)
-
+        if args.delay - delta_time < 0:
+            logging.debug('Computation time %d is larger than the specified delay %d. Sleeping skipped.', delta_time, args.delay)
+        elif args.delay >= 0:
+            sleep_time = args.delay - delta_time
+            logging.debug('Sleeping for %d seconds', sleep_time)
+            time.sleep(sleep_time)
 
 if __name__ == '__main__':
     main()
