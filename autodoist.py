@@ -6,7 +6,7 @@ import time
 import requests
 import argparse
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 global overview_item_ids
 global overview_item_labels
@@ -613,6 +613,8 @@ def main():
                                         if child_item['checked'] == 0:
                                             # child_first_found = True
                                             add_label(child_item, label_id)
+
+                            # Remove labels based on start / due dates
         
                             # If item is too far in the future, remove the next_action tag and skip
                             try:
@@ -628,24 +630,62 @@ def main():
                             
                             # If start-date has not passed yet, remove label
                             try:
-                                f = item['content'].find('start=')
-                                if f > -1:
+                                f1 = item['content'].find('start=')
+                                f2 = item['content'].find('start=due-')
+                                if f1 > -1 and f2 == -1:
                                     f_end = item['content'][f+6:].find(' ')
                                     if f_end > -1:
                                         start_date = item['content'][f+6:f+6+f_end]
                                     else:
                                         start_date = item['content'][f+6:]
+
+                                    # If start-date hasen't passed, remove all labels    
                                     start_date = datetime.strptime(start_date , args.dateformat)
                                     future_diff = (datetime.today()-start_date).days
                                     if future_diff < 0:
                                         remove_label(item, label_id)
+                                        [remove_label(child_item, label_id) for child_item in child_items]
                                         continue
         
-                            except Exception as e:
-                                logging.exception(
-                                    'Error start-date: %s' % str(e))
+                            except:
+                                logging.warning(
+                                    'Wrong start-date format for item: %s. Please use "start=<DD-MM-YYYY>"', item['content'])
                                 continue
+                            
+                            # Recurring task friendly - remove label with relative change from due date
+                            try:
+                                f = item['content'].find('start=due-')
+                                if f > -1:
+                                    f1a = item['content'].find('d') # Find 'd' from 'due'
+                                    f1b = item['content'].rfind('d') # Find 'd' from days
+                                    f2 = item['content'].find('w')
+                                    f_end = item['content'][f+10:].find(' ')
+
+                                    if f_end > -1:
+                                        offset = item['content'][f+10:f+10+f_end-1]
+                                    else:
+                                        offset = item['content'][f+10:-1]
+
+                                    item_due_date = item['due']['date']
+                                    item_due_date = datetime.strptime(item_due_date, '%Y-%m-%d')
+                                    if f1a != f1b and f1b > -1: # To make sure it doesn't trigger if 'w' is chosen
+                                        td = timedelta(days=int(offset))
+                                    elif f2 > -1:
+                                        td = timedelta(weeks=int(offset))
+                                    
+                                    # If we're not in the offset from the due date yet, remove all labels
+                                    start_date = item_due_date - td
+                                    future_diff = (datetime.today()-start_date).days
+                                    if future_diff < 0:
+                                        remove_label(item, label_id)
+                                        [remove_label(child_item, label_id) for child_item in child_items]
+                                        continue
         
+                            except:
+                                logging.warning(
+                                    'Wrong start-date format for item: %s. Please use "start=due-<NUM><d or w>"', item['content'])
+                                continue
+
         # Commit the queue with changes
         if label_id is not None:
             update_labels(label_id)
