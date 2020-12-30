@@ -27,7 +27,7 @@ def make_wide(formatter, w=120, h=36):
 def main():
 
     # Version
-    current_version = 'v1.3'
+    current_version = 'v1.4'
 
     """Main process function."""
     parser = argparse.ArgumentParser(
@@ -235,14 +235,18 @@ def main():
             current_type = args.inbox
         elif name[-len_suffix[0]:] == args.pp_suffix:
             current_type = 'parallel'
-        elif args.pp_suffix == '//' and name[-1:] == '_': # Workaround for section names, which don't allow / symbol.
-            current_type = 'parallel'
         elif name[-len_suffix[1]:] == args.ss_suffix:
             current_type = 'sequential'
         elif name[-len_suffix[1]:] == args.ps_suffix:
             current_type = 'p-s'
         elif name[-len_suffix[1]:] == args.sp_suffix:
             current_type = 's-p'
+        elif args.ps_suffix == '/-' and name[-2:] == '_-': # Workaround for section names, which don't allow / symbol.
+            current_type = 'p-s'
+        elif args.sp_suffix == '-/' and name[-2:] == '-_': # Workaround for section names, which don't allow / symbol.
+            current_type = 's-p'
+        elif args.pp_suffix == '//' and name[-1:] == '_': # Workaround for section names, which don't allow / symbol.
+            current_type = 'parallel'    
         else:
             current_type = None
 
