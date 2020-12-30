@@ -370,6 +370,17 @@ def main():
             # To determine if a sequential task was found
             first_found_project = False
 
+            # Check if we need to (un)header entire project
+            header_project = False
+            unheader_project = False
+
+            if project['name'][:2] == '**':
+                header_project = True
+                project.update(name=project['name'][3:])
+            if project['name'][:2] == '!*':
+                unheader_project = True
+                project.update(name=project['name'][3:])
+
             if label_id is not None:
                 # Get project type
                 project_type, project_type_changed = get_project_type(project)
@@ -413,6 +424,8 @@ def main():
                         x['parent_id'], x['child_order']))
                     items = list(
                         filter(lambda x: not x['content'].startswith('*'), items))
+                    header_items = list(
+                        filter(lambda x: x['content'].startswith('*'), items))
         
                     if label_id is not None:
                         # If some type has been changed, clean everything for good measure
@@ -422,6 +435,15 @@ def main():
                             # Remove parent types
                             for item in items:
                                 item['parent_type'] = None
+
+                    for items in header_items:
+                        # Logic for applying headers
+                        if header_project is True: #TODO add section or item
+                            if item['content'][0] != '*':
+                                item.update(content='* ' + item['content'])
+                        if unheader_project is True: #TODO add section or item
+                            if item['content'][0] == '*':
+                                item.update(content=item['content'][3:])
                 
                     # For all items in this section
                     for item in items:
@@ -434,7 +456,7 @@ def main():
                             filter(lambda x: x['parent_id'] == item['id'], items))
                         child_items = list(
                             filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
-        
+
                         # Logic for recurring lists
                         if not args.recurring:
                             try:
