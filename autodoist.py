@@ -251,6 +251,8 @@ def main():
     # Scan the end of a name to find what type it is
     def get_type(object, key):
 
+        object_name = ''
+
         try:
             old_type = object[key]
         except:
@@ -260,7 +262,10 @@ def main():
         try:
             object_name = object['name'].strip()
         except:
-            object_name = object['content'].strip()
+            try:
+                object_name = object['content'].strip()
+            except:
+                pass
         
         current_type = check_name(object_name)
 
@@ -335,7 +340,7 @@ def main():
                 overview_item_ids[str(item['id'])] = -1
             overview_item_labels[str(item['id'])] = labels
 
-    # Ensure labels are only issued once
+    # Ensure labels are only issued once per item
     def update_labels(label_id):
         filtered_overview_ids = [
             k for k, v in overview_item_ids.items() if v != 0]
@@ -351,6 +356,40 @@ def main():
             'section_order': 0
         }
         return none_sec
+
+    def check_header(level):
+        header_all_in_level = False
+        unheader_all_in_level = False
+        method = 0
+
+        try:
+            name = level['name']
+            method = 1
+        except:
+            try:
+                content = level['content']
+                method = 2
+            except:
+                pass
+
+        if method == 1:
+            if name[:3] == '** ':
+                header_all_in_level = True
+                level.update(name=name[3:])
+            if name[:3] == '!* ':
+                unheader_all_in_level = True
+                level.update(name=name[3:])
+        elif method == 2:
+            if content[:3] == '** ':
+                header_all_in_level = True
+                level.update(content=content[3:])
+            if content[:3] == '!* ':
+                unheader_all_in_level = True
+                level.update(content=content[3:])
+        else:
+            pass
+
+        return header_all_in_level, unheader_all_in_level 
 
     # Check for updates
     check_for_update(current_version)
@@ -371,15 +410,7 @@ def main():
             first_found_project = False
 
             # Check if we need to (un)header entire project
-            header_project = False
-            unheader_project = False
-
-            if project['name'][:2] == '**':
-                header_project = True
-                project.update(name=project['name'][3:])
-            if project['name'][:2] == '!*':
-                unheader_project = True
-                project.update(name=project['name'][3:])
+            header_all_in_p, unheader_all_in_p = check_header(project)
 
             if label_id is not None:
                 # Get project type
@@ -399,6 +430,9 @@ def main():
 
                 for section in sections:
 
+                    # Check if we need to (un)header entire secion
+                    header_all_in_s, unheader_all_in_s = check_header(section)
+
                     # To determine if a sequential task was found
                     first_found_section = False
                     
@@ -408,12 +442,9 @@ def main():
                     logging.debug('Identified \'%s\' as %s type',
                         section['name'], section_type)
                     
-                    # Get all items for the section
-                    
+                    # Get all items for the section                    
                     items = [x for x in project_items if x['section_id'] == section['id']]
-                    # items = api.items.all(lambda x: x['section_id'] == section['id'])
-                    # sections = [x['section_id'] for x in items] # better than api.sections.all(lambda x: x['project_id'] == project['id']), since then NoneTypes are not shown
-        
+
                     # Change top parents_id in order to sort later on
                     for item in items:
                         if not item['parent_id']:
@@ -422,28 +453,15 @@ def main():
                     # Sort by parent_id and filter for completable items
                     items = sorted(items, key=lambda x: (
                         x['parent_id'], x['child_order']))
-                    items = list(
-                        filter(lambda x: not x['content'].startswith('*'), items))
-                    header_items = list(
-                        filter(lambda x: x['content'].startswith('*'), items))
-        
+                                        
+                    # If a type has changed, clean label for good measure
                     if label_id is not None:
-                        # If some type has been changed, clean everything for good measure
                         if project_type_changed == 1 or section_type_changed == 1:
                             # Remove labels
                             [remove_label(item, label_id) for item in items]
                             # Remove parent types
                             for item in items:
                                 item['parent_type'] = None
-
-                    for items in header_items:
-                        # Logic for applying headers
-                        if header_project is True: #TODO add section or item
-                            if item['content'][0] != '*':
-                                item.update(content='* ' + item['content'])
-                        if unheader_project is True: #TODO add section or item
-                            if item['content'][0] == '*':
-                                item.update(content=item['content'][3:])
                 
                     # For all items in this section
                     for item in items:
@@ -456,6 +474,23 @@ def main():
                             filter(lambda x: x['parent_id'] == item['id'], items))
                         child_items = list(
                             filter(lambda x: x['parent_id'] == item['id'], non_checked_items))
+
+                        # Check if we need to (un)header entire item tree
+                        header_all_in_i, unheader_all_in_i = check_header(item)
+
+                        # Logic for applying and removing headers
+                        if any([header_all_in_p, header_all_in_s, header_all_in_i]):
+                            if item['content'][0] != '*':
+                                item.update(content='* ' + item['content'])
+                                for ci in child_items:
+                                    if not ci['content'].startswith('*'):
+                                        ci.update(content='* ' + ci['content'])                                 
+
+                        if any([unheader_all_in_p, unheader_all_in_s]):
+                            if item['content'][0] == '*':
+                                item.update(content=item['content'][2:])
+                        if unheader_all_in_i:
+                            [ci.update(content=ci['content'][2:]) for ci in child_items]
 
                         # Logic for recurring lists
                         if not args.recurring:
@@ -557,8 +592,10 @@ def main():
         
                         # If options turned on, start labelling logic
                         if label_id is not None:
-                            # Skip processing an item if it has already been checked
+                            # Skip processing an item if it has already been checked or is a header
                             if item['checked'] == 1:
+                                continue
+                            if item['content'].startswith('*'):
                                 continue
         
                             # Check item type
@@ -728,6 +765,7 @@ def main():
         if args.onetime:
             break
         
+        # Set a delay before next sync
         end_time = time.time()
         delta_time = end_time - start_time
 
