@@ -696,11 +696,11 @@ def main():
                                 f1 = item['content'].find('start=')
                                 f2 = item['content'].find('start=due-')
                                 if f1 > -1 and f2 == -1:
-                                    f_end = item['content'][f+6:].find(' ')
+                                    f_end = item['content'][f1+6:].find(' ')
                                     if f_end > -1:
-                                        start_date = item['content'][f+6:f+6+f_end]
+                                        start_date = item['content'][f1+6:f1+6+f_end]
                                     else:
-                                        start_date = item['content'][f+6:]
+                                        start_date = item['content'][f1+6:]
 
                                     # If start-date hasen't passed, remove all labels    
                                     start_date = datetime.strptime(start_date , args.dateformat)
