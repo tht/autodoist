@@ -27,7 +27,7 @@ def make_wide(formatter, w=120, h=36):
 def main():
 
     # Version
-    current_version = 'v1.4'
+    current_version = 'v1.4.1'
 
     """Main process function."""
     parser = argparse.ArgumentParser(
@@ -471,6 +471,10 @@ def main():
                     for item in items:
                         active_type = None # Reset
 
+                        # notes = api.notes.all() TODO: Quick notes test to see what the impact is?
+                        # note_content = [x['content'] for x in notes if x['item_id'] == item['id']]
+                        # print(note_content)
+
                         # Determine which child_items exist, both all and the ones that have not been checked yet
                         non_checked_items = list(
                             filter(lambda x: x['checked'] == 0, items))
@@ -712,7 +716,7 @@ def main():
         
                             except:
                                 logging.warning(
-                                    'Wrong start-date format for item: %s. Please use "start=<DD-MM-YYYY>"', item['content'])
+                                    'Wrong start-date format for item: "%s". Please use "start=<DD-MM-YYYY>"', item['content'])
                                 continue
                             
                             # Recurring task friendly - remove label with relative change from due date
@@ -729,8 +733,13 @@ def main():
                                     else:
                                         offset = item['content'][f+10:-1]
 
-                                    item_due_date = item['due']['date']
-                                    item_due_date = datetime.strptime(item_due_date, '%Y-%m-%d')
+                                    try:
+                                        item_due_date = item['due']['date']
+                                        item_due_date = datetime.strptime(item_due_date, '%Y-%m-%d')
+                                    except:
+                                        logging.warning('No due date to determine start date for item: "%s".', item['content'])
+                                        continue
+
                                     if f1a != f1b and f1b > -1: # To make sure it doesn't trigger if 'w' is chosen
                                         td = timedelta(days=int(offset))
                                     elif f2 > -1:
