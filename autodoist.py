@@ -886,13 +886,13 @@ def main():
 
     # Main process functions.
     parser = argparse.ArgumentParser(
-        formatter_class=make_wide(argparse.HelpFormatter, w=110, h=50))
+        formatter_class=make_wide(argparse.HelpFormatter, w=120, h=60))
     parser.add_argument('-a', '--api_key',
                         help='takes your Todoist API Key.', type=str)
     parser.add_argument(
         '-l', '--label', help='enable next action labelling. Define which label to use.', type=str)
     parser.add_argument(
-        '-r', '--regeneration', help='enable regeneration of sub-tasks in recurring lists. Chose overall mode: 0 - regen off, 1 - regen all,  2 - regen only if all sub-tasks are completed. Task labels can be used to overwrite this mode.', type=int, default=None)
+        '-r', '--regeneration', help='enable regeneration of sub-tasks in recurring lists. Chose overall mode: 0 - regen off, 1 - regen all (default),  2 - regen only if all sub-tasks are completed. Task labels can be used to overwrite this mode.', nargs='?', const='1', default=None, type=int)
     parser.add_argument(
         '-e', '--end', help='enable alternative end-of-day time instead of default midnight. Enter a number from 1 to 24 to define which hour is used.', type=int)
     parser.add_argument(
@@ -913,9 +913,9 @@ def main():
         '--onetime', help='update Todoist once and exit.', action='store_true')
     parser.add_argument(
         '--nocache', help='disables caching data to disk for quicker syncing.', action='store_true')
-    parser.add_argument('--debug', help='Enable debugging and store detailed to a log file.',
+    parser.add_argument('--debug', help='enable debugging and store detailed to a log file.',
                         action='store_true')
-    parser.add_argument('--inbox', help='The method the Inbox should be processed with.',
+    parser.add_argument('--inbox', help='the method the Inbox should be processed with.',
                         default=None, choices=['parallel', 'sequential'])
 
     args = parser.parse_args()
