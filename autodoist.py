@@ -71,6 +71,9 @@ def query_yes_no(question, default="yes"):
             sys.stdout.write("Please respond with 'yes' or 'no' "
                              "(or 'y' or 'n').\n")
 
+# Check if label exists, if not, create it
+
+
 def verify_label_existance(args, api, label_name, prompt_mode):
     # Check the regeneration label exists
     label = api.labels.all(lambda x: x['name'] == label_name)
@@ -78,7 +81,7 @@ def verify_label_existance(args, api, label_name, prompt_mode):
     if len(label) > 0:
         label_id = label[0]['id']
         logging.debug('Label \'%s\' found as label id %d',
-                    args.label, label_id)
+                      args.label, label_id)
     else:
         # Create a new label in Todoist
         logging.info(
@@ -102,7 +105,7 @@ def verify_label_existance(args, api, label_name, prompt_mode):
             exit(1)
 
     return label_id
-                
+
 
 # Initialisation of Autodoist
 def initialise(args):
@@ -122,10 +125,16 @@ def initialise(args):
     else:
         pass
 
+    # Check if proper regeneration mode has been selected
+    if args.regeneration is not None:
+        if not set([0,1,2]) & set([args.regeneration]):
+            logging.error('Wrong regeneration mode. Please choose a number from 0 to 2. Check --help for more information on the available modes.')
+            exit(1)
+
     # Show which modes are enabled:
     modes = []
     m_num = 0
-    for x in [args.label, args.recurring, args.end]:
+    for x in [args.label, args.regeneration, args.end]:
         if x:
             modes.append('Enabled')
             m_num += 1
@@ -160,17 +169,18 @@ def initialise(args):
         # Label functionality not needed
         label_id = None
 
-    # If regeneration mode is used
-    if args.recurring is not None:
+    logging.info("Autodoist has connected and is running fine!\n")
+
+    # If regeneration mode is used, verify labels
+    if args.regeneration is not None:
 
         # Verify the existance of the regeneraton labels; force creation of label
-        regen_labels_id = [verify_label_existance(args, api, regen_label, 2) for regen_label in args.regen_label_names]
+        regen_labels_id = [verify_label_existance(
+            args, api, regen_label, 2) for regen_label in args.regen_label_names]
 
     else:
         # Label functionality not needed
-        regen_labels_id = [None, None, None]       
-
-    logging.info("Autodoist has connected and is running fine!\n")
+        regen_labels_id = [None, None, None]
 
     return api, label_id, regen_labels_id
 
@@ -397,6 +407,8 @@ def check_header(level):
     return header_all_in_level, unheader_all_in_level
 
 # Check regen mode based on label name
+
+
 def check_regen_mode(api, item, regen_labels_id):
 
     labels = item['labels']
@@ -410,7 +422,7 @@ def check_regen_mode(api, item, regen_labels_id):
         return None
 
     regen_label_id = overlap[0]
-        
+
     if regen_label_id == regen_labels_id[0]:
         return 0
     elif regen_label_id == regen_labels_id[1]:
@@ -420,11 +432,13 @@ def check_regen_mode(api, item, regen_labels_id):
     else:
         label_name = api.labels.get_by_id(regen_label_id)['name']
         logging.debug(
-                'No regeneration label for item: %s' % label_name)
+            'No regeneration label for item: %s' % label_name)
         return None
 
 
 # Recurring lists logic
+
+
 def run_recurring_lists_logic(args, api, item, child_items, child_items_all, regen_labels_id):
 
     if item['parent_id'] == 0:
@@ -439,25 +453,26 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                             date_old=item['due']['date'])
 
                         # Mark children for action based on mode
-                        if args.recurring:
+                        if args.regeneration is not None:
 
                             # Check if task has a regen label
-                            regen_mode = check_regen_mode(api, item, regen_labels_id) # TODO: HAS TO OVERRULE GENERAL MODE, BUILD
+                            regen_mode = check_regen_mode(
+                                api, item, regen_labels_id)
 
                             # If no label, use general mode instead
                             if regen_mode is None:
-                                regen_mode = args.recurring
+                                regen_mode = args.regeneration
 
                             # Apply tags based on mode
-                            regen_tag = 0
+                            give_regen_tag = 0
 
-                            if regen_mode == 1:    
-                                regen_tag = 1
-                            elif regen_mode == 2:
+                            if regen_mode == 2: # Regen all
+                                give_regen_tag = 1
+                            elif regen_mode == 3: # Regen if all sub-tasks completed
                                 if not child_items:
-                                    regen_tag = 1
+                                    give_regen_tag = 1
 
-                            if regen_tag == 1:
+                            if give_regen_tag == 1:
                                 for child_item in child_items_all:
                                     child_item['r_tag'] = 1
 
@@ -516,9 +531,9 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                 'Parent not recurring: %s' % item['content'])
             pass
 
-    if args.recurring and item['parent_id'] != 0:
+    if args.regeneration is not None and item['parent_id'] != 0:
         try:
-            if item['r_tag'] == 1: # TODO: USE NUMBER FOR MODE
+            if item['r_tag'] == 1:
                 item.update(checked=0)
                 item.update(in_history=0)
                 item['r_tag'] = 0
@@ -639,7 +654,7 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                          for ci in child_items]
 
                     # Logic for recurring lists
-                    if not args.recurring:
+                    if not args.regeneration:
                         try:
                             # If old label is present, reset it
                             if item['r_tag'] == 1:
@@ -649,7 +664,7 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                             pass
 
                     # If options turned on, start recurring lists logic
-                    if args.recurring or args.end:
+                    if args.regeneration is not None or args.end:
                         run_recurring_lists_logic(
                             args, api, item, child_items, child_items_all, regen_labels_id)
 
@@ -659,6 +674,8 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                         if item['checked'] == 1:
                             continue
                         if item['content'].startswith('*'):
+                            # Remove next action label if it's still present
+                            remove_label(item, label_id, overview_item_ids,overview_item_labels)
                             continue
 
                         # Check item type
@@ -721,9 +738,21 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                                 [remove_label(child_item, label_id, overview_item_ids, overview_item_labels)
                                     for child_item in child_items]
 
+                            # If a sub-task, inherit parent task type
+                            if item['parent_id'] !=0:
+                                try:
+                                    active_type = item['parent_type']      
+                                except:
+                                    pass 
+                            
                             # Process sequential tagged items (item_type can overrule project_type)
                             if active_type == 'sequential' or active_type == 'p-s':
                                 for child_item in child_items:
+                                    
+                                    # Ignore headered children
+                                    if child_item['content'].startswith('*'):
+                                        continue
+
                                     # Pass item_type down to the children
                                     child_item['parent_type'] = active_type
                                     # Pass label down to the first child
@@ -742,6 +771,11 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                                 remove_label(
                                     item, label_id, overview_item_ids, overview_item_labels)
                                 for child_item in child_items:
+
+                                    # Ignore headered children
+                                    if child_item['content'].startswith('*'):
+                                        continue
+
                                     child_item['parent_type'] = active_type
                                     if child_item['checked'] == 0:
                                         # child_first_found = True
@@ -842,52 +876,53 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
 
     return overview_item_ids, overview_item_labels
 
-# Main function
+# Main
 
 
 def main():
 
     # Version
-    current_version = 'v1.4.1'
+    current_version = 'v1.5'
 
     # Main process functions.
     parser = argparse.ArgumentParser(
         formatter_class=make_wide(argparse.HelpFormatter, w=110, h=50))
     parser.add_argument('-a', '--api_key',
-                        help='Takes your Todoist API Key.', type=str)
+                        help='takes your Todoist API Key.', type=str)
     parser.add_argument(
-        '-l', '--label', help='Enable next action labelling. Define which label to use.', type=str)
+        '-l', '--label', help='enable next action labelling. Define which label to use.', type=str)
     parser.add_argument(
-        '-r', '--recurring', help='Enable regeneration of sub-tasks in recurring lists. Chose active mode: 0 - regen off, 1 - regen on, 2 - regen only if all tasks are completed', type=int)
+        '-r', '--regeneration', help='enable regeneration of sub-tasks in recurring lists. Chose overall mode: 0 - regen off, 1 - regen all,  2 - regen only if all sub-tasks are completed. Task labels can be used to overwrite this mode.', type=int, default=None)
     parser.add_argument(
-        '-e', '--end', help='Enable alternative end-of-day time instead of default midnight. Enter a number from 1 to 24 to define which hour is used.', type=int)
+        '-e', '--end', help='enable alternative end-of-day time instead of default midnight. Enter a number from 1 to 24 to define which hour is used.', type=int)
     parser.add_argument(
-        '-d', '--delay', help='Specify the delay in seconds between syncs (default 5).', default=5, type=int)
+        '-d', '--delay', help='specify the delay in seconds between syncs (default 5).', default=5, type=int)
     parser.add_argument(
-        '-pp', '--pp_suffix', help='Change suffix for parallel-parallel labeling (default "//").', default='//')
+        '-pp', '--pp_suffix', help='change suffix for parallel-parallel labeling (default "//").', default='//')
     parser.add_argument(
-        '-ss', '--ss_suffix', help='Change suffix for sequential-sequential labeling (default "--").', default='--')
+        '-ss', '--ss_suffix', help='change suffix for sequential-sequential labeling (default "--").', default='--')
     parser.add_argument(
-        '-ps', '--ps_suffix', help='Change suffix for parallel-sequential labeling (default "/-").', default='/-')
+        '-ps', '--ps_suffix', help='change suffix for parallel-sequential labeling (default "/-").', default='/-')
     parser.add_argument(
-        '-sp', '--sp_suffix', help='Change suffix for sequential-parallel labeling (default "-/").', default='-/')
+        '-sp', '--sp_suffix', help='change suffix for sequential-parallel labeling (default "-/").', default='-/')
     parser.add_argument(
-        '-df', '--dateformat', help='Strptime() format of starting date (default "%%d-%%m-%%Y").', default='%d-%m-%Y')
+        '-df', '--dateformat', help='strptime() format of starting date (default "%%d-%%m-%%Y").', default='%d-%m-%Y')
     parser.add_argument(
-        '-hf', '--hide_future', help='Prevent labelling of future tasks beyond a specified number of days.', default=0, type=int)
+        '-hf', '--hide_future', help='prevent labelling of future tasks beyond a specified number of days.', default=0, type=int)
     parser.add_argument(
-        '--onetime', help='Update Todoist once and exit.', action='store_true')
+        '--onetime', help='update Todoist once and exit.', action='store_true')
     parser.add_argument(
-        '--nocache', help='Disables caching data to disk for quicker syncing.', action='store_true')
-    parser.add_argument('--debug', help='Enable detailed debugging in log.',
+        '--nocache', help='disables caching data to disk for quicker syncing.', action='store_true')
+    parser.add_argument('--debug', help='Enable debugging and store detailed to a log file.',
                         action='store_true')
     parser.add_argument('--inbox', help='The method the Inbox should be processed with.',
                         default=None, choices=['parallel', 'sequential'])
 
     args = parser.parse_args()
 
-    #Addition of regeneration labels
-    args.regen_label_names = ('Regen_off', 'Regen_on', 'Regen_if_all_completed')
+    # Addition of regeneration labels
+    args.regen_label_names = ('Regen_off', 'Regen_all',
+                              'Regen_all_if_completed')
 
     # Set debug
     if args.debug:
