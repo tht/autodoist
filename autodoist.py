@@ -421,7 +421,12 @@ def check_regen_mode(api, item, regen_labels_id):
             'Multiple regeneration labels used! Please pick only one for item: "{}".'.format(item['content']))
         return None
 
-    regen_label_id = overlap[0]
+    try:
+        regen_label_id = overlap[0]
+    except:
+        logging.debug(
+            'No regeneration label for item: %s' % item['content'])
+        regen_label_id = [0]
 
     if regen_label_id == regen_labels_id[0]:
         return 0
@@ -430,9 +435,9 @@ def check_regen_mode(api, item, regen_labels_id):
     elif regen_label_id == regen_labels_id[2]:
         return 2
     else:
-        label_name = api.labels.get_by_id(regen_label_id)['name']
-        logging.debug(
-            'No regeneration label for item: %s' % label_name)
+        # label_name = api.labels.get_by_id(regen_label_id)['name']
+        # logging.debug(
+            # 'No regeneration label for item: %s' % item['content'])
         return None
 
 
@@ -462,13 +467,18 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                             # If no label, use general mode instead
                             if regen_mode is None:
                                 regen_mode = args.regeneration
+                                logging.debug('Using general recurring mode \'%s\' for item: %s',
+                                    regen_mode, item['content'])
+                            else:
+                                logging.debug('Using recurring label \'%s\' for item: %s',
+                                    regen_mode, item['content'])
 
                             # Apply tags based on mode
                             give_regen_tag = 0
 
-                            if regen_mode == 2: # Regen all
+                            if regen_mode == 1: # Regen all
                                 give_regen_tag = 1
-                            elif regen_mode == 3: # Regen if all sub-tasks completed
+                            elif regen_mode == 2: # Regen if all sub-tasks completed
                                 if not child_items:
                                     give_regen_tag = 1
 
@@ -527,8 +537,8 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                     api.items.update(item['id'])
 
         except:
-            logging.debug(
-                'Parent not recurring: %s' % item['content'])
+            # logging.debug(
+            #     'Parent not recurring: %s' % item['content'])
             pass
 
     if args.regeneration is not None and item['parent_id'] != 0:
@@ -542,8 +552,8 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                 for child_item in child_items_all:
                     child_item['r_tag'] = 1
         except:
-            logging.debug('Child not recurring: %s' %
-                          item['content'])
+            # logging.debug('Child not recurring: %s' %
+            #               item['content'])
             pass
 
 # Contains all main autodoist functionalities
@@ -567,8 +577,9 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
             # Get project type
             project_type, project_type_changed = get_project_type(
                 args, project)
-            logging.debug('Project \'%s\' being processed as %s',
-                          project['name'], project_type)
+            if project_type is not None:
+                logging.debug('Identified \'%s\' as %s type',
+                            project['name'], project_type)
 
         # Get all items for the project
         project_items = api.items.all(
@@ -593,8 +604,9 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                 # Get section type
                 section_type, section_type_changed = get_section_type(
                     args, section)
-                logging.debug('Identified \'%s\' as %s type',
-                              section['name'], section_type)
+                if section_type is not None:
+                    logging.debug('Identified \'%s\' as %s type',
+                                section['name'], section_type)
 
                 # Get all items for the section
                 items = [x for x in project_items if x['section_id']
@@ -681,8 +693,9 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                         # Check item type
                         item_type, item_type_changed = get_item_type(
                             args, item, project_type)
-                        logging.debug('Identified \'%s\' as %s type',
-                                      item['content'], item_type)
+                        if item_type is not None:
+                            logging.debug('Identified \'%s\' as %s type',
+                                        item['content'], item_type)
 
                         # Determine hierarchy types for logic
                         hierarchy_types = [item_type,
