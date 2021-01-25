@@ -5,9 +5,9 @@ This program adds four major functionalities to Todoist to help automate your wo
 1) Assign automatic next-action labels for a more GTD-like workflow
    - Flexible options to label tasks sequentially or in parallel
    - Limit labels based on a start-date or hide future tasks based on the due date
-2) Enable regeneration of sub-tasks in lists with a recurring date
+2) Enable regeneration of sub-tasks in lists with a recurring date. Multiple modes possile.
 3) Postpone the end-of-day time to after midnight to finish your daily recurring tasks
-4) Make multiple items uncheckable / re-checkable at the same time
+4) Make multiple items (un)checkable at the same time
 
 If this tool helped you out, I would really appreciate your support by providing me with some coffee!
 
@@ -19,6 +19,11 @@ If this tool helped you out, I would really appreciate your support by providing
 
 * Python 3.8
 * ```todoist-python``` package.
+* ```requests``` package.
+
+A requirements.txt is provided, which allows you to install them by using pip:
+
+`pip install -r requirements.txt`
 
 # 1. Automatic next action labels
 
@@ -27,6 +32,12 @@ The program looks for pre-defined tags in the name of every project, section, or
 Projects, sections, and parentless tasks can be tagged independently from each other to create the required functionality. If this tag is not defined, it will not activate this functionality. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
 
 See the example given at [running autodoist](#running-autodoist) on how to run this mode. If the label does not exist yet in your Todoist, a possibility is given to automatically create it. Todoist Premium is required in order to use labels and to make this functionality possible.
+
+## Useful filter tip
+
+For a more GTD workfow, you can use Todoist filters to create a clean list of only actionable tasks using this filter. As a simple example, you could use the following:
+
+`@next_action & #PROJECT_NAME`
 
 ## Sequential processing
 
@@ -74,9 +85,16 @@ The program looks for all parentless tasks with a recurring date. If they contai
 
 ![See example](https://i.imgur.com/WKKd14o.gif)
 
+To give you more flexibility, multiple modes are provided:
+- 1. Off
+- 2. Checking main task regenerates all sub-tasks
+- 3. Checking main task regenerates all sub-tasks only if all sub-tasks have been checked first
+
+When this functionality is activated, it is possible to chose which mode is used as overall functionality for your Todoist. In addition you can define another mode by adding the labels `Regen_off`, `Regen_all`, or `Regen_all_if_completed` to your main task. These labels will automically be created for you, and overrule the overall functionality.
+
 # 3. Postpone the end-of-day
 
-You have a daily recurring task, but you're up working late and now it's past midnight. Todoist will automatically mark it overdue and when you check it, it moved to tomorrow. After a good nights rest you can't complete the task that day!
+You have a daily recurring task, but you're up working late and now it's past midnight. When this happens Todoist will automatically mark it overdue, and when checked by you it moves to tomorrow. This means that after a good nights rest you can't complete the task that day!
 
 By setting an alternative time for the end-of-day you can now finish your work after midnight and the new date will automatically be corrected for you. Todoist Premium is not required for this functionality.
 
