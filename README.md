@@ -53,7 +53,7 @@ If a project, section, or parentless task name ends with `//`, both the parentle
 
 ![Parallel task](https://i.imgur.com/NPTLQ8B.gif)
 
-## Added labelling flexibility
+## Advanced labelling
 
 If a project or section ends with `-/`, all parentless tasks are processed sequentially, and its sub-tasks in parallel.
 
