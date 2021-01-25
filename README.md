@@ -92,7 +92,7 @@ To give you more flexibility, multiple modes are provided:
 2. Checking the main task regenerates all sub-tasks
 3. Checking the main task regenerates all sub-tasks only if all sub-tasks have been checked first
 
-When this functionality is activated, it is possible to chose which mode is used as overall functionality for your Todoist. See the example given at [running Autodoist](#running-autodoist)
+When this functionality is activated, it is possible to chose which mode is used as overall functionality for your Todoist. See the example given at [running Autodoist](#running-autodoist).
 
 In addition you can override the overall mode by adding the labels `Regen_off`, `Regen_all`, or `Regen_all_if_completed` to one of your main recurrings task. These labels will automatically be created for you.
 
