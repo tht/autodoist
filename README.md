@@ -17,11 +17,13 @@ If this tool helped you out, I would really appreciate your support by providing
 
 # Requirements
 
-* Python 3.8
-* ```todoist-python``` package.
-* ```requests``` package.
+Autodoist has been build with Python 3.9.1, which is the recommended version. Older versions of 3.x should be compatible, however be aware that they have not been tested.
 
-A requirements.txt is provided, which allows you to install them by using pip:
+To run Autodoist the following packages are required:
+* ```todoist-python```
+* ```requests```
+
+For your convenience a requirements.txt is provided, which allows you to install them by using pip:
 
 `pip install -r requirements.txt`
 
