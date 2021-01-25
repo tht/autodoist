@@ -88,9 +88,9 @@ The program looks for all parentless tasks with a recurring date. If they contai
 ![See example](https://i.imgur.com/WKKd14o.gif)
 
 To give you more flexibility, multiple modes are provided:
-- 1. Off
-- 2. Checking main task regenerates all sub-tasks
-- 3. Checking main task regenerates all sub-tasks only if all sub-tasks have been checked first
+1. Off
+2. Checking main task regenerates all sub-tasks
+3. Checking main task regenerates all sub-tasks only if all sub-tasks have been checked first
 
 When this functionality is activated, it is possible to chose which mode is used as overall functionality for your Todoist. In addition you can define another mode by adding the labels `Regen_off`, `Regen_all`, or `Regen_all_if_completed` to your main task. These labels will automically be created for you, and overrule the overall functionality.
 
