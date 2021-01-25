@@ -33,11 +33,11 @@ The program looks for pre-defined tags in the name of every project, section, or
 
 Projects, sections, and parentless tasks can be tagged independently from each other to create the required functionality. If this tag is not defined, it will not activate this functionality. The result will be a clear, current and comprehensive list of next actions without the need for further thought.
 
-See the example given at [running autodoist](#running-autodoist) on how to run this mode. If the label does not exist yet in your Todoist, a possibility is given to automatically create it. Todoist Premium is required in order to use labels and to make this functionality possible.
+See the example given at [running Autodoist](#running-autodoist) on how to run this mode. If the label does not exist yet in your Todoist, a possibility is given to automatically create it. Todoist Premium is required in order to use labels and to make this functionality possible.
 
 ## Useful filter tip
 
-For a more GTD workfow, you can use Todoist filters to create a clean list of only actionable tasks using this filter. As a simple example, you could use the following:
+For a more GTD-like workflow, you can use Todoist filters to create a clean and cohesive list that only contains your actionable tasks. As a simple example you could use the following filter:
 
 `@next_action & #PROJECT_NAME`
 
@@ -69,7 +69,7 @@ Any parentless task can also be be given a type by appending `//` or `--` to the
 
 [See example 2 with a serial project](https://i.imgur.com/JfaAOzZ.gif)
 
-Note: Todoist sections don't like to have a slash in the name, it will automatically change to an underscore. The default label options will recognise this to make it work regardless. Of course you're always free to define your own custom label symbols.
+Note: Todoist sections don't like to have a slash in the name, it will automatically change to an underscore. The default label options will recognize this to make it work regardless. Of course you're always free to define your own custom label symbols.
 
 ## Start/Due date enhanced experience
 
@@ -88,11 +88,13 @@ The program looks for all parentless tasks with a recurring date. If they contai
 ![See example](https://i.imgur.com/WKKd14o.gif)
 
 To give you more flexibility, multiple modes are provided:
-1. Off
-2. Checking main task regenerates all sub-tasks
-3. Checking main task regenerates all sub-tasks only if all sub-tasks have been checked first
+1. No regeneration
+2. Checking the main task regenerates all sub-tasks
+3. Checking the main task regenerates all sub-tasks only if all sub-tasks have been checked first
 
-When this functionality is activated, it is possible to chose which mode is used as overall functionality for your Todoist. In addition you can define another mode by adding the labels `Regen_off`, `Regen_all`, or `Regen_all_if_completed` to your main task. These labels will automically be created for you, and overrule the overall functionality.
+When this functionality is activated, it is possible to chose which mode is used as overall functionality for your Todoist. See the example given at [running Autodoist](#running-autodoist)
+
+In addition you can override the overall mode by adding the labels `Regen_off`, `Regen_all`, or `Regen_all_if_completed` to one of your main recurrings task. These labels will automatically be created for you.
 
 # 3. Postpone the end-of-day
 
@@ -114,15 +116,15 @@ You can run Autodoist from any system that supports Python.
 
 ## Running Autodoist
 
-Autodoist will read your environment to retrieve your Todoist API key and additional arguments. In order to run on Windows/Linux/Mac OSX you can use the following commandlines.
+Autodoist will read your environment to retrieve your Todoist API key and additional arguments. In order to run on Windows/Linux/Mac OSX you can use the following command lines.
     
 If you want to enable labelling mode, run with the `-l` argument:
 
     python autodoist.py -a <API Key> -l <LABEL_NAME>
     
-If you want to enable regeneration of sub-tasks in recurring lists, run with the `-r` argument:
+If you want to enable regeneration of sub-tasks in recurring lists, run with the `-r` argument followed by a mode number for the overall functionality (1: no regeneration, 2: regenerate all, 3: regenerate ony if all sub-tasks are completed):
 
-    python autodoist.py -a <API Key> -r
+    python autodoist.py -a <API Key> -r <NUMBER>
     
 If you want to enable an alternative end-of-day, run with the `-e` argument and a number from 1 to 24 to specify which hour:
 
