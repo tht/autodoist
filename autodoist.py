@@ -635,6 +635,7 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                 for item in items:
                     active_type = None  # Reset
 
+                    # Possible nottes routine for the future
                     # notes = api.notes.all() TODO: Quick notes test to see what the impact is?
                     # note_content = [x['content'] for x in notes if x['item_id'] == item['id']]
                     # print(note_content)
