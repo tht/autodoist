@@ -453,10 +453,6 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                     # Check if the T0 task date has changed
                     if item['due']['date'] != item['date_old']:
 
-                        # Save the new date for reference us
-                        item.update(
-                            date_old=item['due']['date'])
-
                         # Mark children for action based on mode
                         if args.regeneration is not None:
 
@@ -528,6 +524,10 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                                         today_str)
                                     item.update(due=item_due)
                                     # item.update(due={'date': '2020-05-29', 'is_recurring': True, 'string': 'every day'})
+
+                        # Save the new date for reference us
+                        item.update(
+                            date_old=item['due']['date'])
 
                 except:
                     # If date has never been saved before, create a new entry
