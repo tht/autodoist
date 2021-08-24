@@ -378,10 +378,12 @@ def check_header(level):
     method = 0
 
     try:
+        # Support for legacy structure
         name = level['name']
         method = 1
     except:
         try:
+            # Current structure
             content = level['content']
             method = 2
         except:
@@ -391,14 +393,14 @@ def check_header(level):
         if name[:3] == '** ':
             header_all_in_level = True
             level.update(name=name[3:])
-        if name[:3] == '!* ':
+        if name[:3] == '!* ' or name[:3] == '_* ':
             unheader_all_in_level = True
             level.update(name=name[3:])
     elif method == 2:
         if content[:3] == '** ':
             header_all_in_level = True
             level.update(content=content[3:])
-        if content[:3] == '!* ':
+        if content[:3] == '!* ' or content[:3] == '_* ':
             unheader_all_in_level = True
             level.update(content=content[3:])
     else:
