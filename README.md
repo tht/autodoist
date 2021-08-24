@@ -108,7 +108,7 @@ By setting an alternative time for the end-of-day you can now finish your work a
 
 Todoist allows the asterisk symbol `* ` to be used to ensure tasks can't be checked by turning them into headers. Now you are able to do this en masse!
 
-Simply add `** ` or `!* ` in front of a project, section, or top item, to automatically turn all the items that it includes into respectively headers or checkable tasks.
+Simply add `** ` or `!* ` in front of a project, section, or top item, to automatically turn all the items that it includes into respectively headers or checkable tasks. Note: when used in a project title or section title, Todoist will replace an exclamation mark with an underscore; this functionality should nevertheless still work.
 
 # Executing Autodoist
 
