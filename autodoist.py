@@ -490,14 +490,17 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                             t = datetime.today()
                             current_hour = t.hour
 
+                            if item['content'] == 'b':
+                                print('stop')
+
                             # Check if current time is before our end-of-day
                             if (args.end - current_hour) > 0:
 
                                 # Determine the difference in days set by todoist
                                 nd = [
-                                    int(x) for x in item['due']['date'].split('-')]
+                                    int(x) for x in item['due']['date'][:10].split('-')]
                                 od = [
-                                    int(x) for x in item['date_old'].split('-')]
+                                    int(x) for x in item['date_old'][:10].split('-')]
 
                                 new_date = datetime(
                                     nd[0], nd[1], nd[2])
@@ -529,13 +532,13 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
 
                         # Save the new date for reference us
                         item.update(
-                            date_old=item['due']['date'])
+                            date_old=item['due']['date'][:10])
 
                 except:
                     # If date has never been saved before, create a new entry
                     logging.debug(
                         'New recurring task detected: %s' % item['content'])
-                    item['date_old'] = item['due']['date']
+                    item['date_old'] = item['due']['date'][:10]
                     api.items.update(item['id'])
 
         except:
@@ -804,7 +807,7 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                         try:
                             if args.hide_future > 0 and 'due' in item.data and item['due'] is not None:
                                 due_date = datetime.strptime(
-                                    item['due']['date'], "%Y-%m-%d")
+                                    item['due']['date'][:10], "%Y-%m-%d")
                                 future_diff = (
                                     due_date - datetime.today()).days
                                 if future_diff >= args.hide_future:
@@ -861,7 +864,7 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                                     offset = item['content'][f+10:-1]
 
                                 try:
-                                    item_due_date = item['due']['date']
+                                    item_due_date = item['due']['date'][:10]
                                     item_due_date = datetime.strptime(
                                         item_due_date, '%Y-%m-%d')
                                 except:
