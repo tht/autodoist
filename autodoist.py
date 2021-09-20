@@ -453,7 +453,7 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
             if item['due']['is_recurring']:
                 try:
                     # Check if the T0 task date has changed
-                    if item['due']['date'] != item['date_old']:
+                    if item['due']['date'][:10] != item['date_old']:
 
                         # Mark children for action based on mode
                         if args.regeneration is not None:
@@ -489,9 +489,6 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
                             # Determine current hour
                             t = datetime.today()
                             current_hour = t.hour
-
-                            if item['content'] == 'b':
-                                print('stop')
 
                             # Check if current time is before our end-of-day
                             if (args.end - current_hour) > 0:
