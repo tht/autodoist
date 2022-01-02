@@ -815,15 +815,15 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
 
                         # If start-date has not passed yet, remove label
                         try:
-                            f1 = item['content'].find('start=')
-                            f2 = item['content'].find('start=due-')
+                            f1 = item['description'].find('start=')
+                            f2 = item['description'].find('start=due-')
                             if f1 > -1 and f2 == -1:
-                                f_end = item['content'][f1+6:].find(' ')
+                                f_end = item['description'][f1+6:].find(' ')
                                 if f_end > -1:
-                                    start_date = item['content'][f1 +
+                                    start_date = item['description'][f1 +
                                                                  6:f1+6+f_end]
                                 else:
-                                    start_date = item['content'][f1+6:]
+                                    start_date = item['description'][f1+6:]
 
                                 # If start-date hasen't passed, remove all labels
                                 start_date = datetime.strptime(
@@ -844,19 +844,19 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
 
                         # Recurring task friendly - remove label with relative change from due date
                         try:
-                            f = item['content'].find('start=due-')
+                            f = item['description'].find('start=due-')
                             if f > -1:
-                                f1a = item['content'].find(
+                                f1a = item['description'].find(
                                     'd')  # Find 'd' from 'due'
-                                f1b = item['content'].rfind(
+                                f1b = item['description'].rfind(
                                     'd')  # Find 'd' from days
-                                f2 = item['content'].find('w')
-                                f_end = item['content'][f+10:].find(' ')
+                                f2 = item['description'].find('w')
+                                f_end = item['description'][f+10:].find(' ')
 
                                 if f_end > -1:
-                                    offset = item['content'][f+10:f+10+f_end-1]
+                                    offset = item['description'][f+10:f+10+f_end-1]
                                 else:
-                                    offset = item['content'][f+10:-1]
+                                    offset = item['description'][f+10:-1]
 
                                 try:
                                     item_due_date = item['due']['date']
