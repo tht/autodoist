@@ -981,8 +981,8 @@ def main():
             else:
                 logging.info(
                     '%d changes committed to Todoist.', len_api_q)
-        else:
-            logging.info('No changes in queue, skipping sync.')
+        # else:
+            # logging.info('No changes in queue, skipping sync.')
 
         # If onetime is set, exit after first execution.
         if args.onetime:
