@@ -166,7 +166,7 @@ def initialise(args):
         label_id = verify_label_existance(args, api, args.label, 1)
         
         # Get blocked label id
-        blocked_label_id = verify_label_existance(args, api, 'blocked', 2)
+        blocked_label_id = verify_label_existance(args, api, args.blocked_label, 2)
 
     else:
         # Label functionality not needed
@@ -920,6 +920,8 @@ def main():
                         help='takes your Todoist API Key.', type=str)
     parser.add_argument(
         '-l', '--label', help='enable next action labelling. Define which label to use.', type=str)
+    parser.add_argument(
+        '-bl', '--blocked_label', help='define blocked label to prevent next action labelling', type=str)
     parser.add_argument(
         '-r', '--regeneration', help='enable regeneration of sub-tasks in recurring lists. Chose overall mode: 0 - regen off, 1 - regen all (default),  2 - regen only if all sub-tasks are completed. Task labels can be used to overwrite this mode.', nargs='?', const='1', default=None, type=int)
     parser.add_argument(
