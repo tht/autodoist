@@ -854,7 +854,7 @@ def autodoist_magic(args, api, label_id, blocked_label_id, regen_labels_id):
 
                         except:
                             logging.warning(
-                                'Wrong start-date format for item: "%s". Please use "start=<DD-MM-YYYY>"', item['content'])
+                                'Wrong start-date format for item: "%s". Please use "start=%s"', item['content'], args.dateformat)
                             continue
 
                         # Recurring task friendly - remove label with relative change from due date
