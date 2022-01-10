@@ -795,6 +795,17 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                                         # child_first_found = True
                                         add_label(
                                             child_item, label_id, overview_item_ids, overview_item_labels)
+                        
+                        # Check for blocked tag
+                        try:
+                            if 2159287622 in item['labels']:
+                                remove_label(
+                                    item, label_id, overview_item_ids, overview_item_labels)
+                                [remove_label(child_item, label_id, overview_item_ids,
+                                              overview_item_labels) for child_item in child_items]
+                                continue
+                        except:
+                            continue
 
                         # Remove labels based on start / due dates
 
