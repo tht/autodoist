@@ -164,10 +164,14 @@ def initialise(args):
 
         # Verify that the next action label exists; ask user if it needs to be created
         label_id = verify_label_existance(args, api, args.label, 1)
+        
+        # Get blocked label id
+        blocked_label_id = verify_label_existance(args, api, 'blocked', 2)
 
     else:
         # Label functionality not needed
         label_id = None
+        blocked_label_id = None
 
     logging.info("Autodoist has connected and is running fine!\n")
 
@@ -182,7 +186,7 @@ def initialise(args):
         # Label functionality not needed
         regen_labels_id = [None, None, None]
 
-    return api, label_id, regen_labels_id
+    return api, label_id, blocked_label_id, regen_labels_id
 
 # Check for Autodoist update
 
@@ -559,7 +563,7 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
 # Contains all main autodoist functionalities
 
 
-def autodoist_magic(args, api, label_id, regen_labels_id):
+def autodoist_magic(args, api, label_id, blocked_label_id, regen_labels_id):
 
     # Preallocate dictionaries
     overview_item_ids = {}
@@ -798,7 +802,7 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                         
                         # Check for blocked tag
                         try:
-                            if 2159287622 in item['labels']:
+                            if blocked_label_id in item['labels']:
                                 remove_label(
                                     item, label_id, overview_item_ids, overview_item_labels)
                                 [remove_label(child_item, label_id, overview_item_ids,
@@ -967,7 +971,7 @@ def main():
     check_for_update(current_version)
 
     # Initialise api
-    api, label_id, regen_labels_id = initialise(args)
+    api, label_id, blocked_label_id, regen_labels_id = initialise(args)
 
     # Start main loop
     while True:
@@ -976,7 +980,7 @@ def main():
 
         # Evaluate projects, sections, and items
         overview_item_ids, overview_item_labels = autodoist_magic(
-            args, api, label_id, regen_labels_id)
+            args, api, label_id, blocked_label_id, regen_labels_id)
 
         # Commit the queue with changes
         if label_id is not None:
