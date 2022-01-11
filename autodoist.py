@@ -874,7 +874,9 @@ def autodoist_magic(args, api, label_id, blocked_label_id, regen_labels_id):
                                     offset = item['description'][f+10:-1]
 
                                 try:
-                                    item_due_date = item['due']['date']
+                                    # item_due_date = item['due']['date']
+                                    # Ignore time when calculating start date compared to current date
+                                    item_due_date = item['due']['date'][0:10]
                                     item_due_date = datetime.strptime(
                                         item_due_date, '%Y-%m-%d')
                                 except:
