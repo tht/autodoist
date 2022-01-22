@@ -725,6 +725,9 @@ def autodoist_magic(args, api, label_id, blocked_label_id, regen_labels_id):
                                         add_label(
                                             item, label_id, overview_item_ids, overview_item_labels)
                                         first_found_section = True
+                                    else:
+                                        remove_label(
+                                            item, label_id, overview_item_ids, overview_item_labels)
                                 elif section_type == 'parallel' or section_type == 'p-s':
                                     add_label(
                                         item, label_id, overview_item_ids, overview_item_labels)
@@ -738,6 +741,9 @@ def autodoist_magic(args, api, label_id, blocked_label_id, regen_labels_id):
                                         add_label(
                                             item, label_id, overview_item_ids, overview_item_labels)
                                         first_found_project = True
+                                    else:
+                                        remove_label(
+                                            item, label_id, overview_item_ids, overview_item_labels)
 
                                 elif project_type == 'parallel' or project_type == 'p-s':
                                     add_label(
